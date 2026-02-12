@@ -26,8 +26,7 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Standard initialization for Firebase modular SDK
-// The initializeApp function is exported from "firebase/app" in Firebase v9+
+// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
