@@ -21,4 +21,5 @@ export interface DiscussionSession {
   waitlist: Student[];
 }
 
-export type ViewState = 'browse' | 'success' | 'admin';
+// Added 'canceled' to ViewState to reflect the view state used in App.tsx
+export type ViewState = 'browse' | 'success' | 'admin' | 'canceled';

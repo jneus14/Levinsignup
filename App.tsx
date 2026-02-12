@@ -1,20 +1,18 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DiscussionSession, ViewState, Student } from './types';
-import { INITIAL_SESSIONS } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { db, subscribeToSessions, updateSessionDoc, seedDatabase } from './services/firebase';
-import { doc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
+import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
 
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<DiscussionSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [view, setView] = useState<string>('browse'); 
+  const [view, setView] = useState<ViewState>('browse'); 
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [lastRegistered, setLastRegistered] = useState<{ 
     student: Student;
     session: DiscussionSession; 
@@ -24,43 +22,66 @@ const App: React.FC = () => {
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
   const [showSignupEmail, setShowSignupEmail] = useState(false);
 
+  // Fix: Centralized database connection logic
+  const connectToDatabase = useCallback(async () => {
+    setIsRetrying(true);
+    try {
+      // 1. Attempt to seed the database (checks connectivity and permissions)
+      await seedDatabase();
+      setError(null);
+      
+      // 2. Setup real-time listener
+      const unsubscribe = subscribeToSessions(
+        (data) => {
+          setSessions(data);
+          setError(null);
+          setIsRetrying(false);
+        },
+        (err) => {
+          console.error("Subscription Error:", err);
+          setError({ 
+            message: err.code === 'permission-denied'
+              ? "Database is locked. Security rules update required."
+              : "Real-time updates failed. Check your internet connection.", 
+            code: err.code 
+          });
+          setIsRetrying(false);
+        }
+      );
+      
+      return unsubscribe;
+    } catch (e: any) {
+      console.error("Initialization Error:", e);
+      setError({ 
+        message: e.code === 'permission-denied' 
+          ? "Access denied. Please check your Firestore Security Rules." 
+          : "Failed to connect to Firestore service. Ensure the project is active.", 
+        code: e.code 
+      });
+      setIsRetrying(false);
+      return () => {};
+    }
+  }, []);
+
   useEffect(() => {
+    let unsubscribe: () => void = () => {};
+    
     const init = async () => {
-      try {
-        await seedDatabase();
-        setError(null);
-      } catch (e: any) {
-        console.error("Initialization Error:", e);
-        setError({ 
-          message: e.message || "Failed to connect to database.", 
-          code: e.code 
-        });
-      }
+      const unsub = await connectToDatabase();
+      unsubscribe = unsub;
     };
 
     init();
-
-    const unsubscribe = subscribeToSessions(
-      (data) => {
-        setSessions(data);
-        setError(null); 
-      },
-      (err) => {
-        console.error("Subscription Error:", err);
-        setError({ 
-          message: "Real-time updates are currently blocked by database permissions.", 
-          code: err.code 
-        });
-      }
-    );
 
     const params = new URLSearchParams(window.location.search);
     if (params.has('admin')) {
       setIsAdminMode(true);
     }
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubscribe();
+    };
+  }, [connectToDatabase]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -79,7 +100,7 @@ const App: React.FC = () => {
         }
       }
     }
-  }, [sessions]);
+  }, [sessions, isAdminMode]);
 
   const performRemoval = async (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => {
     const session = sessions.find(s => s.id === sessionId);
@@ -134,7 +155,7 @@ const App: React.FC = () => {
       setView('success');
       setShowSignupEmail(true);
     } catch (error) {
-      alert("Registration failed. Please check your internet connection or database permissions.");
+      alert("Registration failed. This usually happens if the database is in Locked Mode.");
     }
   };
 
@@ -150,23 +171,31 @@ const App: React.FC = () => {
   const activeSession = sessions.find(s => s.id === activeSessionId);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Permission Error Setup Guide */}
-      {error && (error.code === 'permission-denied' || error.message.includes('permission')) && (
-        <div className="bg-rose-50 border-b border-rose-200 p-6 sticky top-0 z-[60] shadow-xl animate-in slide-in-from-top duration-500">
-          <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6 items-start">
-            <div className="bg-rose-100 p-3 rounded-2xl text-rose-600">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m0-6V7m0 11.333V21m-6.938-4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    <div className="min-h-screen bg-slate-50 pb-20 font-sans">
+      {/* Permission Error Banner */}
+      {error && (
+        <div className="bg-rose-600 border-b border-rose-700 p-6 sticky top-0 z-[60] shadow-2xl animate-in slide-in-from-top duration-500">
+          <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6 items-center">
+            <div className="bg-white/20 p-3 rounded-2xl text-white">
+              <svg className={`w-8 h-8 ${isRetrying ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isRetrying ? (
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m0-6V7m0 11.333V21m-6.938-4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                )}
               </svg>
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-black text-rose-900 mb-2 tracking-tight">Setup Required: Firestore Permissions</h3>
-              <p className="text-rose-700 text-sm mb-4 leading-relaxed">
-                Your database is currently <strong>locked</strong>. To fix this, go to your Firebase Console, click <strong>Firestore Database</strong> &rarr; <strong>Rules</strong>, and paste the following code:
+            <div className="flex-1 text-white">
+              <h3 className="text-xl font-black mb-1 tracking-tight">
+                {error.code === 'permission-denied' ? 'Database Permissions Required' : 'Connection Interrupted'}
+              </h3>
+              <p className="text-rose-100 text-sm mb-4">
+                {error.message} {error.code === 'permission-denied' && "Ensure rules are published in the console."}
               </p>
-              <div className="relative group">
-                <pre className="bg-rose-950 text-rose-100 p-4 rounded-xl text-xs font-mono overflow-x-auto border-2 border-rose-800 shadow-inner">
+              
+              {error.code === 'permission-denied' && (
+                <div className="relative group max-w-lg">
+                  <pre className="bg-rose-950 text-rose-200 p-4 rounded-xl text-[10px] font-mono overflow-x-auto border border-rose-800 shadow-inner">
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -175,14 +204,35 @@ service cloud.firestore {
     }
   }
 }`}
-                </pre>
-                <button 
-                  onClick={() => navigator.clipboard.writeText(`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}`)}
-                  className="absolute top-3 right-3 bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg transition-all"
-                >
-                  Copy Rules
-                </button>
-              </div>
+                  </pre>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}`);
+                      alert("Rules copied to clipboard!");
+                    }}
+                    className="absolute top-2 right-2 bg-white text-rose-600 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-all shadow-sm"
+                  >
+                    Copy Rules
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={() => connectToDatabase()}
+                disabled={isRetrying}
+                className="px-6 py-3 bg-rose-500 text-white font-black rounded-xl hover:bg-rose-400 transition-all text-sm uppercase tracking-widest shadow-lg disabled:opacity-50"
+              >
+                {isRetrying ? 'Checking...' : 'Retry Connection'}
+              </button>
+              <a 
+                href="https://console.firebase.google.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="px-6 py-3 bg-white text-rose-600 font-black rounded-xl hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-lg text-center"
+              >
+                Firebase Console
+              </a>
             </div>
           </div>
         </div>
@@ -255,7 +305,7 @@ service cloud.firestore {
                 <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Connecting to Cloud Firestore...</p>
               </div>
             )}
-            {sessions.length === 0 && error && (
+            {sessions.length === 0 && error && error.code !== 'permission-denied' && (
               <div className="col-span-full py-20 text-center">
                 <div className="bg-slate-200 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,6 +314,7 @@ service cloud.firestore {
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">Service Offline</h3>
                 <p className="text-slate-500 max-w-sm mx-auto italic">{error.message}</p>
+                <button onClick={() => connectToDatabase()} className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-md">Retry Connection</button>
               </div>
             )}
           </div>
@@ -317,9 +368,9 @@ service cloud.firestore {
           <ParticipantList 
             sessions={sessions} 
             onReset={() => {}} 
-            onAddSession={async (s) => await setDoc(doc(db, "sessions", s.id), s)}
+            onAddSession={addSessionDoc}
             onUpdateSession={updateSessionDoc}
-            onDeleteSession={async (id) => await deleteDoc(doc(db, "sessions", id))}
+            onDeleteSession={deleteSessionDoc}
             onRemoveParticipant={performRemoval}
           />
         )}
