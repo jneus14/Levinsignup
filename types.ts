@@ -1,0 +1,24 @@
+
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  classYear: string;
+  timestamp: number;
+  isPromoted?: boolean; // New flag to track if student came from waitlist
+}
+
+export interface DiscussionSession {
+  id: string;
+  faculty: string;
+  topic?: string;
+  date: string;
+  time: string;
+  location: string;
+  capacity: number;
+  isUnlimited?: boolean;
+  participants: Student[];
+  waitlist: Student[];
+}
+
+export type ViewState = 'browse' | 'success' | 'admin';
