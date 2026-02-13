@@ -1,5 +1,5 @@
-
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+// Ensure initializeApp is imported from the modular Firebase app package
+import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -11,11 +11,10 @@ import {
   writeBatch, 
   deleteDoc,
   query,
-  limit,
-  Firestore
+  limit
 } from 'firebase/firestore';
-import { DiscussionSession } from '../types';
-import { INITIAL_SESSIONS } from '../constants';
+import { DiscussionSession } from '../types.ts';
+import { INITIAL_SESSIONS } from '../constants.ts';
 
 // Project specific configuration
 const firebaseConfig = {
@@ -28,11 +27,9 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Initialize Firebase App
-const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-
-// Initialize Firestore with the specific app instance
-export const db: Firestore = getFirestore(app);
+// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app' (Modular SDK v9+)
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
 
 const SESSIONS_COLLECTION = "sessions";
 
@@ -41,6 +38,7 @@ const SESSIONS_COLLECTION = "sessions";
  */
 export const seedDatabase = async () => {
   try {
+    // We use a query with limit(1) to check for existence efficiently
     const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
     const querySnapshot = await getDocs(q);
     
@@ -56,6 +54,7 @@ export const seedDatabase = async () => {
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
+    // Re-throw so the UI can catch permission-denied
     throw error;
   }
 };
