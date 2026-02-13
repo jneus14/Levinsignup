@@ -11,9 +11,9 @@ import {
   deleteDoc,
   query,
   limit,
-  runTransaction
+  runTransaction,
+  type Firestore
 } from 'firebase/firestore';
-import type { Firestore } from 'firebase/firestore';
 import { DiscussionSession, Student } from '../types';
 import { INITIAL_SESSIONS } from '../constants';
 
@@ -149,7 +149,7 @@ export const registerStudent = async (sessionId: string, name: string, email: st
     // Return the updated state context for the UI
     return { 
       student: newStudent, 
-      session: { ...session, ...updates },
+      session: { ...session, ...updates } as DiscussionSession,
       isWaitlist: isFull 
     };
   });

@@ -180,7 +180,6 @@ const App: React.FC = () => {
     if (!activeSessionId) return;
     
     try {
-      // Use transaction exclusively
       const result = await registerStudent(activeSessionId, name, email, classYear);
       
       setActiveSessionId(null);
