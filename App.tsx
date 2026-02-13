@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DiscussionSession, ViewState, Student } from './types.ts';
-import { SessionCard } from './components/SessionCard.tsx';
-import { SignUpForm } from './components/SignUpForm.tsx';
-import { ParticipantList } from './components/ParticipantList.tsx';
-import { PromotionEmailModal } from './components/PromotionEmailModal.tsx';
-import { SignupEmailModal } from './components/SignupEmailModal.tsx';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase.ts';
+import { DiscussionSession, ViewState, Student } from './types';
+import { SessionCard } from './components/SessionCard';
+import { SignUpForm } from './components/SignUpForm';
+import { ParticipantList } from './components/ParticipantList';
+import { PromotionEmailModal } from './components/PromotionEmailModal';
+import { SignupEmailModal } from './components/SignupEmailModal';
+import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
 
 const ADMIN_PASSCODE = "levin2025";
-const PRODUCTION_HOSTNAME = "levinsignup-git-main-julias-projects-7b23c09a.vercel.app";
+const PRODUCTION_HOSTNAME = "lcsignup.vercel.app";
 
 const App: React.FC = () => {
   const [isMoved, setIsMoved] = useState(false);
@@ -34,17 +34,20 @@ const App: React.FC = () => {
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
   const [showSignupEmail, setShowSignupEmail] = useState(false);
 
-  // Check for migration
+  // Check for migration - ensure the production domain is always active
   useEffect(() => {
     const currentHost = window.location.hostname;
-    // Allow localhost for development, but block other non-vercel environments
-    if (currentHost !== PRODUCTION_HOSTNAME && currentHost !== 'localhost' && !currentHost.includes('127.0.0.1')) {
-      setIsMoved(true);
-    }
+    const isProd = currentHost === PRODUCTION_HOSTNAME || 
+                   currentHost === 'localhost' || 
+                   currentHost.includes('127.0.0.1');
+    
+    // Only trigger "Moved" screen if we are on a known old/deprecated domain
+    // Since we only have one main production domain, we default to false.
+    setIsMoved(false);
   }, []);
 
   const connectToDatabase = useCallback(async () => {
-    if (isMoved) return; // Don't connect if we're redirecting
+    if (isMoved) return; 
     setIsRetrying(true);
     try {
       await seedDatabase();
@@ -84,7 +87,7 @@ const App: React.FC = () => {
     let unsubscribe: () => void = () => {};
     const init = async () => {
       const unsub = await connectToDatabase();
-      unsubscribe = unsub;
+      if (unsub) unsubscribe = unsub;
     };
     init();
 
@@ -110,7 +113,7 @@ const App: React.FC = () => {
           </div>
           <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">App Migrated</h1>
           <p className="text-slate-500 mb-10 leading-relaxed font-medium">
-            This version of the SLS Levin Center Signup Tool is no longer active. Please use our official production URL.
+            This version of the SLS Levin Center Signup Tool has been moved.
           </p>
           <a 
             href={`https://${PRODUCTION_HOSTNAME}`}
@@ -393,11 +396,42 @@ const App: React.FC = () => {
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                  </svg>
                </div>
-               <h2 className="text-4xl font-black text-indigo-950 mb-4 tracking-tight">Registration Complete</h2>
-               <p className="text-xl text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed">
-                 You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>.
+               <h2 className="text-4xl font-black text-indigo-950 mb-4 tracking-tight">
+                 {lastRegistered.isWaitlist ? 'Waitlist Confirmed' : 'Registration Complete'}
+               </h2>
+               <p className="text-xl text-slate-600 mb-10 max-w-lg mx-auto leading-relaxed">
+                 {lastRegistered.isWaitlist 
+                   ? `You've been added to the waitlist for the session with `
+                   : `You are all set for the session with `
+                 }
+                 <strong>{lastRegistered.session.faculty}</strong>.
                </p>
-               <button onClick={() => setView('browse')} className="px-12 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105">Back to Browse</button>
+               
+               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-sm mx-auto">
+                 {!lastRegistered.isWaitlist && (
+                   <a 
+                    href={getGoogleCalendarUrl(lastRegistered.session)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105 flex items-center justify-center gap-2"
+                   >
+                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                      </svg>
+                     Add to Google Calendar
+                   </a>
+                 )}
+                 <button 
+                  onClick={() => setView('browse')} 
+                  className={`w-full px-8 py-4 font-black rounded-2xl transition-all hover:scale-105 ${
+                    lastRegistered.isWaitlist 
+                    ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' 
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                 >
+                   Back to Browse
+                 </button>
+               </div>
             </div>
           </div>
         )}

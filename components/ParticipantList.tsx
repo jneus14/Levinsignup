@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
-import { DiscussionSession, Student } from '../types.ts';
-import { SessionModal } from './SessionModal.tsx';
-import { getSessionInsights } from '../services/gemini.ts';
+import { DiscussionSession, Student } from '../types';
+import { SessionModal } from './SessionModal';
+import { getSessionInsights } from '../services/gemini';
 
 interface ParticipantListProps {
   sessions: DiscussionSession[];
