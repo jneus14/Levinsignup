@@ -10,10 +10,11 @@ import {
   writeBatch, 
   deleteDoc,
   query,
-  limit
+  limit,
+  runTransaction
 } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
-import { DiscussionSession } from '../types';
+import { DiscussionSession, Student } from '../types';
 import { INITIAL_SESSIONS } from '../constants';
 
 const firebaseConfig = {
@@ -113,4 +114,57 @@ export const addSessionDoc = async (session: DiscussionSession) => {
 export const deleteSessionDoc = async (sessionId: string) => {
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
   await deleteDoc(docRef);
+};
+
+/**
+ * Register a student for a session using a transaction to prevent race conditions.
+ * Automatically handles waitlist placement and duplicate checking.
+ */
+export const registerStudent = async (sessionId: string, name: string, email: string, classYear: string) => {
+  const sessionRef = doc(db, SESSIONS_COLLECTION, sessionId);
+
+  return await runTransaction(db, async (transaction) => {
+    const sessionDoc = await transaction.get(sessionRef);
+    if (!sessionDoc.exists()) {
+      throw new Error("Session not found");
+    }
+
+    const session = sessionDoc.data() as DiscussionSession;
+
+    // Check existing registration by email (case-insensitive)
+    const emailLower = email.toLowerCase().trim();
+    const isRegistered = session.participants.some(p => p.email.toLowerCase() === emailLower);
+    const isWaitlisted = session.waitlist.some(p => p.email.toLowerCase() === emailLower);
+
+    if (isRegistered || isWaitlisted) {
+      throw new Error("You are already registered for this session.");
+    }
+
+    const isFull = !session.isUnlimited && session.participants.length >= session.capacity;
+    
+    const newStudent: Student = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: name.trim(),
+      email: email.trim(),
+      classYear,
+      timestamp: Date.now()
+    };
+
+    if (isFull) {
+      session.waitlist.push(newStudent);
+    } else {
+      session.participants.push(newStudent);
+    }
+
+    transaction.update(sessionRef, {
+      participants: session.participants,
+      waitlist: session.waitlist
+    });
+
+    return { 
+      student: newStudent, 
+      session: session,
+      isWaitlist: isFull 
+    };
+  });
 };

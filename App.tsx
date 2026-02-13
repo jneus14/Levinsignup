@@ -5,7 +5,7 @@ import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
+import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc, registerStudent } from './services/firebase';
 
 const ADMIN_PASSCODE = "levin2025";
 
@@ -171,30 +171,21 @@ const App: React.FC = () => {
 
   const handleRegistrationSubmit = async (name: string, email: string, classYear: string) => {
     if (!activeSessionId) return;
-    const targetSession = sessions.find(s => s.id === activeSessionId);
-    if (!targetSession) return;
-
-    const isWaitlist = !targetSession.isUnlimited && targetSession.participants.length >= targetSession.capacity;
-    const newStudent: Student = {
-      id: Math.random().toString(36).substr(2, 9),
-      name, email, classYear,
-      timestamp: Date.now()
-    };
-
-    const updatedSession = {
-      ...targetSession,
-      participants: isWaitlist ? targetSession.participants : [...targetSession.participants, newStudent],
-      waitlist: isWaitlist ? [...targetSession.waitlist, newStudent] : targetSession.waitlist
-    };
-
+    
     try {
-      await updateSessionDoc(updatedSession);
+      const result = await registerStudent(activeSessionId, name, email, classYear);
+      
       setActiveSessionId(null);
-      setLastRegistered({ student: newStudent, session: targetSession, isWaitlist });
+      setLastRegistered({ 
+        student: result.student, 
+        session: result.session, 
+        isWaitlist: result.isWaitlist 
+      });
       setView('success');
       setShowSignupEmail(true);
-    } catch (error) {
-      alert("Registration failed. Please try again later.");
+    } catch (error: any) {
+      console.error("Registration failed:", error);
+      alert(error.message || "Registration failed. Please try again.");
     }
   };
 
@@ -264,7 +255,7 @@ const App: React.FC = () => {
                 SLS Levin Center
               </h1>
               <h2 className="text-lg md:text-xl font-bold text-slate-500 tracking-tight">
-                Faculty Small Group Discussions
+                Faculty Current Event Discussions
               </h2>
             </div>
             
