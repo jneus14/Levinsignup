@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DiscussionSession } from '../types';
 
@@ -25,8 +24,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ session, onSubmit, onCan
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="my-8 bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
-        <div className={`p-8 ${isFull ? 'bg-amber-50' : 'bg-indigo-50'}`}>
+      <div className="my-8 bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300 border border-slate-100 font-sans">
+        <div className={`p-8 ${isFull ? 'bg-amber-50' : 'bg-rose-50'}`}>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             {isFull ? 'Waitlist Registration' : 'Reserve Your Spot'}
           </h2>
@@ -52,7 +51,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ session, onSubmit, onCan
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none transition-all font-semibold placeholder:text-slate-300"
+              className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-rose-900 outline-none transition-all font-semibold placeholder:text-slate-300"
               placeholder="e.g. Jane Doe"
             />
           </div>
@@ -64,7 +63,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ session, onSubmit, onCan
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none transition-all font-semibold placeholder:text-slate-300"
+              className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-rose-900 outline-none transition-all font-semibold placeholder:text-slate-300"
               placeholder="jane.doe@stanford.edu"
             />
           </div>
@@ -76,7 +75,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ session, onSubmit, onCan
                 required
                 value={classYear}
                 onChange={(e) => setClassYear(e.target.value)}
-                className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-indigo-500 outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
+                className="w-full px-5 py-3 border-2 border-slate-100 rounded-2xl focus:border-rose-900 outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
               >
                 <option value="" disabled>Select your year</option>
                 {CLASS_YEARS.map((year) => (
@@ -103,7 +102,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ session, onSubmit, onCan
               type="submit"
               disabled={!classYear}
               className={`flex-[1.5] px-6 py-4 rounded-2xl text-white font-black text-sm uppercase tracking-widest transition-all shadow-xl disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed ${
-                isFull ? 'bg-slate-800 shadow-slate-200' : 'bg-indigo-600 shadow-indigo-100'
+                isFull ? 'bg-slate-800 shadow-slate-200' : 'bg-rose-900 shadow-rose-100 hover:bg-rose-950'
               }`}
             >
               {isFull ? 'Waitlist' : 'Sign-up'}

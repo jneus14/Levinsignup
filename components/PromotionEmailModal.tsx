@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Student, DiscussionSession } from '../types';
 
@@ -10,7 +9,7 @@ interface PromotionEmailModalProps {
 
 export const PromotionEmailModal: React.FC<PromotionEmailModalProps> = ({ student, session, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto font-sans">
       <div className="max-w-2xl w-full animate-in zoom-in slide-in-from-bottom-8 duration-500">
         {/* System Notification Header */}
         <div className="bg-emerald-600 text-white px-6 py-4 rounded-t-3xl flex justify-between items-center shadow-lg">
@@ -44,7 +43,7 @@ export const PromotionEmailModal: React.FC<PromotionEmailModalProps> = ({ studen
               </div>
               <div className="flex">
                 <span className="w-20 text-xs font-black text-slate-400 uppercase tracking-widest">Subject:</span>
-                <span className="text-sm font-black text-indigo-900 uppercase tracking-tight">Confirmed: You've been promoted to the discussion with {session.faculty}</span>
+                <span className="text-sm font-black text-rose-950 uppercase tracking-tight">Confirmed: You've been promoted to the discussion with {session.faculty}</span>
               </div>
             </div>
           </div>
@@ -58,9 +57,9 @@ export const PromotionEmailModal: React.FC<PromotionEmailModalProps> = ({ studen
               and you have been automatically moved from the waitlist to the <strong>active registration roster</strong>.
             </p>
 
-            <div className="bg-indigo-50/50 rounded-2xl p-6 border-l-4 border-indigo-600 mb-8 not-italic font-sans">
-              <h4 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Event Reminders</h4>
-              <div className="space-y-2 text-base font-bold text-indigo-950">
+            <div className="bg-rose-50/50 rounded-2xl p-6 border-l-4 border-rose-900 mb-8 not-italic font-sans">
+              <h4 className="text-xs font-black text-rose-900 uppercase tracking-[0.2em] mb-4">Event Reminders</h4>
+              <div className="space-y-2 text-base font-bold text-rose-950">
                 <p>Date: {session.date}</p>
                 <p>Time: {session.time}</p>
                 <p>Location: {session.location}</p>

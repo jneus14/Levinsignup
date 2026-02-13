@@ -1,3 +1,4 @@
+// Ensure initializeApp is imported from the modular Firebase app package
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -12,8 +13,8 @@ import {
   query,
   limit
 } from 'firebase/firestore';
-import { DiscussionSession } from '../types';
-import { INITIAL_SESSIONS } from '../constants';
+import { DiscussionSession } from '../types.ts';
+import { INITIAL_SESSIONS } from '../constants.ts';
 
 // Project specific configuration
 const firebaseConfig = {
@@ -26,7 +27,7 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
+// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app' (Modular SDK v9+)
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 

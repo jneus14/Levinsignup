@@ -1,12 +1,12 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { DiscussionSession } from "../types";
+import { DiscussionSession } from "../types.ts";
 
 /**
  * Generates AI insights based on the current registration state using Gemini 3 Flash
  */
 export const getSessionInsights = async (sessions: DiscussionSession[]): Promise<string> => {
   try {
-    // Initialize GoogleGenAI with a named parameter object right before use
+    // Initialize GoogleGenAI with a named parameter object right before use to ensure latest key
     const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
     
     // Prepare a concise representation of the roster for the prompt
@@ -18,7 +18,7 @@ export const getSessionInsights = async (sessions: DiscussionSession[]): Promise
       demographics: s.participants.map(p => p.classYear)
     }));
 
-    // Generate content using the correct model name and system instruction in config
+    // Using gemini-3-flash-preview for text summarization tasks as per guidelines
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Analyze the following faculty discussion signup data and provide a professional 3-sentence summary.
@@ -30,7 +30,7 @@ Data: ${JSON.stringify(summaryData)}`,
       },
     });
 
-    // Access the .text property directly (not as a method)
+    // Access the .text property directly (not as a method) as per SDK rules
     return response.text || "No insights could be generated from the current data.";
   } catch (error) {
     console.error("Gemini Insight Generation Error:", error);

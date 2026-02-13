@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DiscussionSession } from '../types';
 
@@ -52,8 +51,8 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 font-sans">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-300 border border-slate-100">
         <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-900">
             {initialSession ? 'Edit Discussion' : 'Create New Discussion'}
@@ -73,7 +72,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
                 required
                 type="text"
                 placeholder="e.g. Jennifer Chacon"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none"
                 value={formData.faculty}
                 onChange={e => setFormData({...formData, faculty: e.target.value})}
               />
@@ -83,7 +82,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <input
                 type="text"
                 placeholder="e.g. Immigration Policy"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none"
                 value={formData.topic}
                 onChange={e => setFormData({...formData, topic: e.target.value})}
               />
@@ -94,7 +93,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
                 required
                 type="text"
                 placeholder="e.g. April 16"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
@@ -105,7 +104,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
                 required
                 type="text"
                 placeholder="e.g. 12:45 - 2:00 PM"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none"
                 value={formData.time}
                 onChange={e => setFormData({...formData, time: e.target.value})}
               />
@@ -116,7 +115,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
                 required
                 type="text"
                 placeholder="e.g. SLS Room 180"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none"
                 value={formData.location}
                 onChange={e => setFormData({...formData, location: e.target.value})}
               />
@@ -126,7 +125,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <input
                 disabled={formData.isUnlimited}
                 type="number"
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
+                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-rose-900 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 value={formData.capacity}
                 onChange={e => setFormData({...formData, capacity: e.target.value})}
               />
@@ -135,7 +134,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-rose-900 rounded focus:ring-rose-900"
                   checked={formData.isUnlimited}
                   onChange={e => setFormData({...formData, isUnlimited: e.target.checked})}
                 />
@@ -154,7 +153,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow-lg shadow-indigo-200"
+              className="flex-1 px-4 py-2 bg-rose-900 text-white rounded-lg hover:bg-rose-950 font-semibold shadow-lg shadow-rose-100"
             >
               {initialSession ? 'Save Changes' : 'Create Session'}
             </button>

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DiscussionSession, ViewState, Student } from './types';
-import { SessionCard } from './components/SessionCard';
-import { SignUpForm } from './components/SignUpForm';
-import { ParticipantList } from './components/ParticipantList';
-import { PromotionEmailModal } from './components/PromotionEmailModal';
-import { SignupEmailModal } from './components/SignupEmailModal';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
+import { DiscussionSession, ViewState, Student } from './types.ts';
+import { SessionCard } from './components/SessionCard.tsx';
+import { SignUpForm } from './components/SignUpForm.tsx';
+import { ParticipantList } from './components/ParticipantList.tsx';
+import { PromotionEmailModal } from './components/PromotionEmailModal.tsx';
+import { SignupEmailModal } from './components/SignupEmailModal.tsx';
+import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase.ts';
 
-const ADMIN_PASSCODE = "levin2025"; // Default passcode
+const ADMIN_PASSCODE = "levin2025";
+const PRODUCTION_HOSTNAME = "levinsignup-git-main-julias-projects-7b23c09a.vercel.app";
 
 const App: React.FC = () => {
+  const [isMoved, setIsMoved] = useState(false);
   const [sessions, setSessions] = useState<DiscussionSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>('browse'); 
@@ -32,7 +34,23 @@ const App: React.FC = () => {
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
   const [showSignupEmail, setShowSignupEmail] = useState(false);
 
+  // Check for migration
+  useEffect(() => {
+    const currentHost = window.location.hostname;
+    const isAllowedPreview = 
+      currentHost === PRODUCTION_HOSTNAME || 
+      currentHost === 'localhost' || 
+      currentHost.includes('127.0.0.1') ||
+      currentHost.includes('googleusercontent.com') ||
+      currentHost.includes('webcontainer.io');
+
+    if (!isAllowedPreview) {
+      setIsMoved(true);
+    }
+  }, []);
+
   const connectToDatabase = useCallback(async () => {
+    if (isMoved) return;
     setIsRetrying(true);
     try {
       await seedDatabase();
@@ -66,7 +84,7 @@ const App: React.FC = () => {
       setIsRetrying(false);
       return () => {};
     }
-  }, []);
+  }, [isMoved]);
 
   useEffect(() => {
     let unsubscribe: () => void = () => {};
@@ -82,8 +100,37 @@ const App: React.FC = () => {
       if (isAuthenticated) setView('admin');
     }
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [connectToDatabase, isAuthenticated]);
+
+  if (isMoved) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 text-center border border-slate-200 animate-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-rose-100 text-rose-900 rounded-3xl flex items-center justify-center mx-auto mb-8">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">App Migrated</h1>
+          <p className="text-slate-500 mb-10 leading-relaxed font-medium">
+            This version of the SLS Levin Center Signup Tool is no longer active. Please use our official production URL.
+          </p>
+          <a 
+            href={`https://${PRODUCTION_HOSTNAME}`}
+            className="block w-full py-5 bg-rose-900 text-white font-black rounded-2xl shadow-xl shadow-rose-100 hover:bg-rose-950 transition-all uppercase tracking-widest text-sm"
+          >
+            Go to Official Site
+          </a>
+          <div className="mt-8 pt-8 border-t border-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Levin Center for Public Service</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +149,6 @@ const App: React.FC = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('admin_authenticated');
     setView('browse');
-    // Clear admin from URL
     window.history.replaceState({}, '', window.location.pathname);
   };
 
@@ -165,7 +211,7 @@ const App: React.FC = () => {
 
   const getCancellationUrl = () => {
     if (!lastRegistered) return '';
-    return `${window.location.origin}${window.location.pathname}?cancel=${lastRegistered.session.id}:${lastRegistered.student.id}`;
+    return `https://${PRODUCTION_HOSTNAME}?cancel=${lastRegistered.session.id}:${lastRegistered.student.id}`;
   };
 
   const getGoogleCalendarUrl = (session: DiscussionSession) => {
@@ -176,9 +222,8 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 font-sans flex flex-col">
-      {/* Permission Error Banner */}
       {error && (
-        <div className="bg-rose-600 border-b border-rose-700 p-6 sticky top-0 z-[60] shadow-2xl animate-in slide-in-from-top duration-500">
+        <div className="bg-rose-900 border-b border-rose-950 p-6 sticky top-0 z-[60] shadow-2xl animate-in slide-in-from-top duration-500">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6 items-center">
             <div className="bg-white/20 p-3 rounded-2xl text-white">
               <svg className={`w-8 h-8 ${isRetrying ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +237,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => connectToDatabase()}
               disabled={isRetrying}
-              className="px-6 py-3 bg-white text-rose-600 font-black rounded-xl hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-lg"
+              className="px-6 py-3 bg-white text-rose-900 font-black rounded-xl hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-lg"
             >
               {isRetrying ? 'Retrying...' : 'Retry Connection'}
             </button>
@@ -223,7 +268,7 @@ const App: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-extrabold text-indigo-900 tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-rose-950 tracking-tight leading-tight">
                 SLS Levin Center
               </h1>
               <h2 className="text-lg md:text-xl font-bold text-slate-500 tracking-tight">
@@ -235,7 +280,7 @@ const App: React.FC = () => {
               <button 
                 onClick={() => setView('browse')}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  view === 'browse' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
+                  view === 'browse' ? 'bg-rose-50 text-rose-900 ring-1 ring-rose-200' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 Browse
@@ -248,7 +293,7 @@ const App: React.FC = () => {
                       else setIsAdminMode(true);
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      view === 'admin' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
+                      view === 'admin' ? 'bg-rose-50 text-rose-900 ring-1 ring-rose-200' : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Admin
@@ -256,7 +301,7 @@ const App: React.FC = () => {
                   {isAuthenticated && (
                     <button 
                       onClick={handleLogout}
-                      className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                      className="p-2 text-slate-400 hover:text-rose-900 transition-colors"
                       title="Logout"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -279,7 +324,7 @@ const App: React.FC = () => {
             ))}
             {sessions.length === 0 && !error && (
               <div className="col-span-full py-20 text-center">
-                <div className="animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <div className="animate-spin w-10 h-10 border-4 border-rose-900 border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Connecting to Cloud Firestore...</p>
               </div>
             )}
@@ -289,7 +334,7 @@ const App: React.FC = () => {
         {(isAdminMode || view === 'admin') && !isAuthenticated && (
           <div className="max-w-md mx-auto py-20 animate-in fade-in zoom-in duration-500">
             <div className="bg-white rounded-3xl p-10 shadow-2xl border border-slate-200">
-              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <div className="w-16 h-16 bg-rose-50 text-rose-900 rounded-2xl flex items-center justify-center mb-6 mx-auto">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m0-6V7m0 11.333V21m-6.938-4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -303,7 +348,7 @@ const App: React.FC = () => {
                     type="password"
                     placeholder="Enter Passcode"
                     className={`w-full px-5 py-3 border-2 rounded-2xl outline-none transition-all font-semibold text-center tracking-widest ${
-                      authError ? 'border-rose-300 bg-rose-50' : 'border-slate-100 focus:border-indigo-500'
+                      authError ? 'border-rose-300 bg-rose-50' : 'border-slate-100 focus:border-rose-900'
                     }`}
                     value={passcodeAttempt}
                     onChange={(e) => {
@@ -316,7 +361,7 @@ const App: React.FC = () => {
                 </div>
                 <button 
                   type="submit"
-                  className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase tracking-widest text-sm"
+                  className="w-full py-4 bg-rose-900 text-white font-black rounded-2xl shadow-xl shadow-rose-100 hover:bg-rose-950 transition-all uppercase tracking-widest text-sm"
                 >
                   Unlock Dashboard
                 </button>
@@ -354,11 +399,11 @@ const App: React.FC = () => {
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                  </svg>
                </div>
-               <h2 className="text-4xl font-black text-indigo-950 mb-4 tracking-tight">Registration Complete</h2>
+               <h2 className="text-4xl font-black text-rose-950 mb-4 tracking-tight">Registration Complete</h2>
                <p className="text-xl text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed">
                  You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>.
                </p>
-               <button onClick={() => setView('browse')} className="px-12 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105">Back to Browse</button>
+               <button onClick={() => setView('browse')} className="px-12 py-4 bg-rose-900 text-white font-black rounded-2xl shadow-xl shadow-rose-200 transition-all hover:scale-105">Back to Browse</button>
             </div>
           </div>
         )}
@@ -367,7 +412,7 @@ const App: React.FC = () => {
           <div className="max-w-xl mx-auto text-center py-20">
             <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Registration Vacated</h2>
             <p className="text-lg text-slate-600 mb-10">Your spot has been successfully removed.</p>
-            <button onClick={() => setView('browse')} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100">Return Home</button>
+            <button onClick={() => setView('browse')} className="px-10 py-4 bg-rose-900 text-white font-black rounded-2xl shadow-xl shadow-rose-100">Return Home</button>
           </div>
         )}
       </main>
@@ -381,7 +426,7 @@ const App: React.FC = () => {
                 if (isAuthenticated) setView('admin');
                 else setIsAdminMode(true);
               }}
-              className="text-slate-300 hover:text-indigo-600 text-xs font-bold uppercase tracking-[0.2em] transition-colors"
+              className="text-slate-300 hover:text-rose-900 text-xs font-bold uppercase tracking-[0.2em] transition-colors"
             >
               Admin Portal
             </button>
