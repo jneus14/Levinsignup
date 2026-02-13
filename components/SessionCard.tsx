@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DiscussionSession } from '../types';
 
@@ -12,14 +13,14 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onSignUp }) =
   const waitlistCount = session.waitlist.length;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full font-sans">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full">
       <div className="p-6 flex flex-col h-full">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-xl font-bold text-slate-900 leading-tight">
             {session.faculty}
           </h3>
           <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
-            isFull ? 'bg-amber-100 text-amber-700' : 'bg-rose-50 text-rose-900 border border-rose-100'
+            isFull ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
           }`}>
             {isFull 
               ? 'Waitlist Only' 
@@ -65,7 +66,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onSignUp }) =
             className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 shadow-sm flex items-center justify-center gap-2 ${
               isFull 
               ? 'bg-slate-800 text-white hover:bg-slate-900' 
-              : 'bg-rose-900 text-white hover:bg-rose-950'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
             }`}
           >
             {isFull ? (
