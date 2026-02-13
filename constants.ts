@@ -1,4 +1,3 @@
-
 import { DiscussionSession } from './types';
 
 export const INITIAL_SESSIONS: DiscussionSession[] = [
@@ -10,6 +9,7 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     time: '2:00 PM',
     location: 'SLS',
     capacity: 10,
+    isActive: true,
     participants: [],
     waitlist: []
   },
@@ -18,8 +18,9 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     faculty: 'George Fisher',
     date: 'Thursday, March 5',
     time: '11:30 AM - 1:00 PM',
-    location: 'SLS',
-    capacity: 6,
+    location: 'Coupa or Crocker',
+    capacity: 0,
+    isActive: true,
     participants: [],
     waitlist: []
   },
@@ -32,6 +33,7 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     location: 'SLS',
     capacity: 10,
     isUnlimited: true,
+    isActive: true,
     participants: [],
     waitlist: []
   },
@@ -41,7 +43,8 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     date: 'to be scheduled with interested students',
     time: 'TBD',
     location: 'Faculty Residence (His Home)',
-    capacity: 5,
+    capacity: 0,
+    isActive: true,
     participants: [],
     waitlist: []
   }

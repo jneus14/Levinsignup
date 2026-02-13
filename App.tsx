@@ -8,10 +8,8 @@ import { SignupEmailModal } from './components/SignupEmailModal';
 import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
 
 const ADMIN_PASSCODE = "levin2025";
-const PRODUCTION_HOSTNAME = "lcsignup.vercel.app";
 
 const App: React.FC = () => {
-  const [isMoved, setIsMoved] = useState(false);
   const [sessions, setSessions] = useState<DiscussionSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>('browse'); 
@@ -34,20 +32,8 @@ const App: React.FC = () => {
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
   const [showSignupEmail, setShowSignupEmail] = useState(false);
 
-  // Check for migration - ensure the production domain is always active
-  useEffect(() => {
-    const currentHost = window.location.hostname;
-    const isProd = currentHost === PRODUCTION_HOSTNAME || 
-                   currentHost === 'localhost' || 
-                   currentHost.includes('127.0.0.1');
-    
-    // Only trigger "Moved" screen if we are on a known old/deprecated domain
-    // Since we only have one main production domain, we default to false.
-    setIsMoved(false);
-  }, []);
-
+  // Initialize and check URL params for cancellation
   const connectToDatabase = useCallback(async () => {
-    if (isMoved) return; 
     setIsRetrying(true);
     try {
       await seedDatabase();
@@ -81,7 +67,7 @@ const App: React.FC = () => {
       setIsRetrying(false);
       return () => {};
     }
-  }, [isMoved]);
+  }, []);
 
   useEffect(() => {
     let unsubscribe: () => void = () => {};
@@ -91,43 +77,73 @@ const App: React.FC = () => {
     };
     init();
 
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [connectToDatabase]);
+
+  // Handle URL parameters for Admin and Cancellation
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    // Admin check
     if (params.has('admin')) {
       setIsAdminMode(true);
       if (isAuthenticated) setView('admin');
     }
 
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, [connectToDatabase, isAuthenticated]);
+    // Cancellation check: ?cancel=sessionId:studentId
+    const cancelParam = params.get('cancel');
+    if (cancelParam && sessions.length > 0) {
+      const [sessionId, studentId] = cancelParam.split(':');
+      if (sessionId && studentId) {
+        handleCancellation(sessionId, studentId);
+        // Clear params after handling
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [sessions.length, isAuthenticated]);
 
-  if (isMoved) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 text-center border border-slate-200 animate-in zoom-in duration-500">
-          <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-8">
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">App Migrated</h1>
-          <p className="text-slate-500 mb-10 leading-relaxed font-medium">
-            This version of the SLS Levin Center Signup Tool has been moved.
-          </p>
-          <a 
-            href={`https://${PRODUCTION_HOSTNAME}`}
-            className="block w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase tracking-widest text-sm"
-          >
-            Go to Official Site
-          </a>
-          <div className="mt-8 pt-8 border-t border-slate-100">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">Levin Center for Public Service</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleCancellation = async (sessionId: string, studentId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    let isParticipant = session.participants.some(p => p.id === studentId);
+    let isWaitlist = session.waitlist.some(p => p.id === studentId);
+
+    if (isParticipant) {
+      await performRemoval(sessionId, studentId, 'participants');
+      setView('canceled');
+    } else if (isWaitlist) {
+      await performRemoval(sessionId, studentId, 'waitlist');
+      setView('canceled');
+    }
+  };
+
+  const performRemoval = async (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    let newParticipants = [...session.participants];
+    let newWaitlist = [...session.waitlist];
+
+    if (listType === 'participants') {
+      newParticipants = newParticipants.filter(p => p.id !== studentId);
+      // Promote from waitlist if not unlimited and below capacity
+      if (!session.isUnlimited && newParticipants.length < session.capacity && newWaitlist.length > 0) {
+        const [nextInLine, ...remainingWaitlist] = newWaitlist;
+        const promotedStudent = { ...nextInLine, isPromoted: true };
+        newParticipants = [...newParticipants, promotedStudent];
+        newWaitlist = remainingWaitlist;
+        setPromotionNotify({ student: promotedStudent, session: session });
+      }
+    } else {
+      newWaitlist = newWaitlist.filter(p => p.id !== studentId);
+    }
+
+    const updatedSession = { ...session, participants: newParticipants, waitlist: newWaitlist };
+    await updateSessionDoc(updatedSession);
+  };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,30 +163,6 @@ const App: React.FC = () => {
     sessionStorage.removeItem('admin_authenticated');
     setView('browse');
     window.history.replaceState({}, '', window.location.pathname);
-  };
-
-  const performRemoval = async (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => {
-    const session = sessions.find(s => s.id === sessionId);
-    if (!session) return;
-
-    let newParticipants = [...session.participants];
-    let newWaitlist = [...session.waitlist];
-
-    if (listType === 'participants') {
-      newParticipants = newParticipants.filter(p => p.id !== studentId);
-      if (!session.isUnlimited && newParticipants.length < session.capacity && newWaitlist.length > 0) {
-        const [nextInLine, ...remainingWaitlist] = newWaitlist;
-        const promotedStudent = { ...nextInLine, isPromoted: true };
-        newParticipants = [...newParticipants, promotedStudent];
-        newWaitlist = remainingWaitlist;
-        setPromotionNotify({ student: promotedStudent, session: session });
-      }
-    } else {
-      newWaitlist = newWaitlist.filter(p => p.id !== studentId);
-    }
-
-    const updatedSession = { ...session, participants: newParticipants, waitlist: newWaitlist };
-    await updateSessionDoc(updatedSession);
   };
 
   const handleSignUpClick = (id: string) => {
@@ -208,7 +200,7 @@ const App: React.FC = () => {
 
   const getCancellationUrl = () => {
     if (!lastRegistered) return '';
-    return `https://${PRODUCTION_HOSTNAME}?cancel=${lastRegistered.session.id}:${lastRegistered.student.id}`;
+    return `${window.location.origin}${window.location.pathname}?cancel=${lastRegistered.session.id}:${lastRegistered.student.id}`;
   };
 
   const getGoogleCalendarUrl = (session: DiscussionSession) => {
@@ -216,6 +208,9 @@ const App: React.FC = () => {
   };
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
+
+  // Filter visible sessions for Browse mode
+  const visibleSessions = sessions.filter(session => session.isActive !== false);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 font-sans flex flex-col">
@@ -316,13 +311,19 @@ const App: React.FC = () => {
       <main className="max-w-6xl mx-auto px-4 py-12 flex-grow w-full">
         {view === 'browse' && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {sessions.map(session => (
+            {visibleSessions.map(session => (
               <SessionCard key={session.id} session={session} onSignUp={handleSignUpClick} />
             ))}
-            {sessions.length === 0 && !error && (
+            {visibleSessions.length === 0 && !error && (
               <div className="col-span-full py-20 text-center">
-                <div className="animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Connecting to Cloud Firestore...</p>
+                {sessions.length > 0 ? (
+                    <p className="text-slate-500 font-medium">No active sessions available at the moment.</p>
+                ) : (
+                    <>
+                        <div className="animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Connecting to Cloud Firestore...</p>
+                    </>
+                )}
               </div>
             )}
           </div>
@@ -437,10 +438,15 @@ const App: React.FC = () => {
         )}
 
         {view === 'canceled' && (
-          <div className="max-w-xl mx-auto text-center py-20">
+          <div className="max-w-xl mx-auto text-center py-20 animate-in zoom-in duration-500">
+            <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-8">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
             <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Registration Vacated</h2>
-            <p className="text-lg text-slate-600 mb-10">Your spot has been successfully removed.</p>
-            <button onClick={() => setView('browse')} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100">Return Home</button>
+            <p className="text-lg text-slate-600 mb-10">Your spot has been successfully removed and the waitlist updated.</p>
+            <button onClick={() => setView('browse')} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 hover:scale-105 transition-all uppercase tracking-widest text-sm">Return Home</button>
           </div>
         )}
       </main>

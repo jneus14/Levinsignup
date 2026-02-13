@@ -48,6 +48,11 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     }
   };
 
+  const handleToggleActive = async (session: DiscussionSession) => {
+    const newStatus = !(session.isActive !== false);
+    onUpdateSession({ ...session, isActive: newStatus });
+  };
+
   const handleRemoveClick = (sessionId: string, student: Student, listType: 'participants' | 'waitlist') => {
     const listLabel = listType === 'participants' ? 'active roster' : 'waitlist';
     if (window.confirm(`Remove ${student.name} from the ${listLabel}? If removed from the roster, the next student on the waitlist will be automatically promoted.`)) {
@@ -190,19 +195,29 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
 
       <div className="space-y-6 pb-12">
         {sessions.map(session => (
-          <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+          <div key={session.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden ${session.isActive === false ? 'border-slate-300 opacity-90' : 'border-slate-200'}`}>
+            <div className={`p-6 border-b flex justify-between items-center ${session.isActive === false ? 'bg-slate-100 border-slate-200' : 'bg-slate-50 border-slate-100'}`}>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">{session.faculty}</h3>
+                <div className="flex items-center gap-3">
+                    <h3 className={`text-lg font-bold ${session.isActive === false ? 'text-slate-500' : 'text-slate-900'}`}>{session.faculty}</h3>
+                    {session.isActive === false && (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-wider">Inactive</span>
+                    )}
+                </div>
                 <p className="text-sm text-slate-500">{session.date} &bull; Capacity: {session.isUnlimited ? 'Unlimited' : session.capacity}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right mr-2">
-                  <p className="text-xs font-bold uppercase text-slate-400">Status</p>
-                  <p className={`text-sm font-bold ${(!session.isUnlimited && session.participants.length >= session.capacity) ? 'text-amber-600' : 'text-emerald-600'}`}>
-                    {(!session.isUnlimited && session.participants.length >= session.capacity) ? 'FULL' : 'OPEN'}
-                  </p>
-                </div>
+              <div className="flex items-center gap-4">
+                {/* Active Toggle */}
+                <label className="flex items-center gap-2 cursor-pointer relative group">
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={session.isActive !== false} onChange={() => handleToggleActive(session)} />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                  </div>
+                  <span className="text-xs font-bold uppercase text-slate-400 group-hover:text-slate-600 transition-colors">
+                    {session.isActive !== false ? 'Active' : 'Hidden'}
+                  </span>
+                </label>
+
                 <div className="flex gap-1 border-l pl-3 border-slate-200">
                   <button 
                     onClick={() => handleEditClick(session)}
@@ -226,7 +241,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
               </div>
             </div>
 
-            <div className="p-6 grid md:grid-cols-2 gap-8">
+            <div className={`p-6 grid md:grid-cols-2 gap-8 ${session.isActive === false ? 'opacity-50 pointer-events-none' : ''}`}>
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -271,8 +286,14 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                             {new Date(p.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </span>
                           <button 
-                            onClick={() => handleRemoveClick(session.id, p, 'participants')}
-                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
+                            onClick={(e) => {
+                                e.stopPropagation(); // prevent parent click issues
+                                // Re-enable pointer events for this button even if parent is inactive? 
+                                // Actually, if parent has pointer-events-none, this won't fire. 
+                                // Let's remove pointer-events-none from the grid container and apply visual opacity only.
+                                handleRemoveClick(session.id, p, 'participants');
+                            }}
+                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all pointer-events-auto"
                             title="Remove Student and Promote Waitlist"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +333,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                         </div>
                         <button 
                           onClick={() => handleRemoveClick(session.id, p, 'waitlist')}
-                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
+                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all pointer-events-auto"
                           title="Remove from Waitlist"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
