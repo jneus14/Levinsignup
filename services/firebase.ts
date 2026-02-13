@@ -28,7 +28,6 @@ const firebaseConfig = {
 };
 
 // Singleton pattern for Firebase initialization
-// Using try-catch to handle potential initialization race conditions
 let app;
 try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -44,7 +43,6 @@ const SESSIONS_COLLECTION = "sessions";
 
 /**
  * Seed the database with initial sessions if it's empty.
- * This ensures data persistence and prevents overwriting user data on app reload.
  */
 export const seedDatabase = async () => {
   try {
@@ -59,9 +57,7 @@ export const seedDatabase = async () => {
         batch.set(docRef, session);
       });
       await batch.commit();
-      console.log("Seeding complete. Data is now securely stored in Firestore.");
-    } else {
-        console.log("Database already initialized. Skipping seed to preserve user data.");
+      console.log("Seeding complete.");
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
@@ -92,25 +88,16 @@ export const subscribeToSessions = (
   );
 };
 
-/**
- * Update a specific session document
- */
 export const updateSessionDoc = async (session: DiscussionSession) => {
   const docRef = doc(db, SESSIONS_COLLECTION, session.id);
   await updateDoc(docRef, { ...session });
 };
 
-/**
- * Add a new session document
- */
 export const addSessionDoc = async (session: DiscussionSession) => {
   const docRef = doc(db, SESSIONS_COLLECTION, session.id);
   await setDoc(docRef, session);
 };
 
-/**
- * Delete a specific session document
- */
 export const deleteSessionDoc = async (sessionId: string) => {
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
   await deleteDoc(docRef);
@@ -118,7 +105,6 @@ export const deleteSessionDoc = async (sessionId: string) => {
 
 /**
  * Register a student for a session using a transaction to prevent race conditions.
- * Automatically handles waitlist placement and duplicate checking.
  */
 export const registerStudent = async (sessionId: string, name: string, email: string, classYear: string) => {
   const sessionRef = doc(db, SESSIONS_COLLECTION, sessionId);
@@ -131,7 +117,7 @@ export const registerStudent = async (sessionId: string, name: string, email: st
 
     const session = sessionDoc.data() as DiscussionSession;
 
-    // Check existing registration by email (case-insensitive)
+    // Case-insensitive email check
     const emailLower = email.toLowerCase().trim();
     const isRegistered = session.participants.some(p => p.email.toLowerCase() === emailLower);
     const isWaitlisted = session.waitlist.some(p => p.email.toLowerCase() === emailLower);
@@ -150,20 +136,20 @@ export const registerStudent = async (sessionId: string, name: string, email: st
       timestamp: Date.now()
     };
 
+    const updates: Partial<DiscussionSession> = {};
+
     if (isFull) {
-      session.waitlist.push(newStudent);
+      updates.waitlist = [...session.waitlist, newStudent];
     } else {
-      session.participants.push(newStudent);
+      updates.participants = [...session.participants, newStudent];
     }
 
-    transaction.update(sessionRef, {
-      participants: session.participants,
-      waitlist: session.waitlist
-    });
+    transaction.update(sessionRef, updates);
 
+    // Return the updated state context for the UI
     return { 
       student: newStudent, 
-      session: session,
+      session: { ...session, ...updates },
       isWaitlist: isFull 
     };
   });

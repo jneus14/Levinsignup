@@ -5,7 +5,14 @@ import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc, registerStudent } from './services/firebase';
+import { 
+  subscribeToSessions, 
+  updateSessionDoc, 
+  seedDatabase, 
+  deleteSessionDoc, 
+  addSessionDoc, 
+  registerStudent 
+} from './services/firebase';
 
 const ADMIN_PASSCODE = "levin2025";
 
@@ -173,6 +180,7 @@ const App: React.FC = () => {
     if (!activeSessionId) return;
     
     try {
+      // Use transaction exclusively
       const result = await registerStudent(activeSessionId, name, email, classYear);
       
       setActiveSessionId(null);
