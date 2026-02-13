@@ -79,7 +79,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   const adminUrl = `${publicUrl}?admin=true`;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6 animate-in slide-in-from-bottom duration-500 font-sans">
+    <div className="max-w-4xl mx-auto p-4 space-y-6 animate-in slide-in-from-bottom duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
@@ -88,7 +88,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         <div className="flex gap-2">
           <button 
             onClick={handleAddClick}
-            className="px-4 py-2 text-sm font-semibold bg-rose-900 text-white rounded-lg hover:bg-rose-950 transition-colors shadow-md"
+            className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
           >
             + Add New Session
           </button>
@@ -110,7 +110,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         <div className="relative z-10">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold flex items-center gap-2">
-              <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               AI Roster Intelligence
@@ -118,7 +118,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
             <button 
               onClick={handleGenerateAIInsights}
               disabled={isGeneratingInsights || sessions.length === 0}
-              className="px-4 py-1.5 bg-rose-900 hover:bg-rose-950 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg"
+              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg"
             >
               {isGeneratingInsights ? 'Analyzing...' : insights ? 'Update Analysis' : 'Generate Analysis'}
             </button>
@@ -126,7 +126,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
           
           {insights ? (
             <div className="bg-white/10 rounded-xl p-4 border border-white/10 animate-in fade-in zoom-in duration-300">
-              <p className="text-sm text-rose-50 leading-relaxed italic">"{insights}"</p>
+              <p className="text-sm text-indigo-50 leading-relaxed italic">"{insights}"</p>
             </div>
           ) : (
             <p className="text-sm text-slate-400">Request an AI-powered executive summary of current enrollment trends and popular faculty sessions.</p>
@@ -134,7 +134,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         </div>
       </div>
 
-      <div className="bg-rose-950 text-white rounded-2xl shadow-lg p-6 overflow-hidden relative border border-rose-900">
+      <div className="bg-indigo-900 text-white rounded-2xl shadow-lg p-6 overflow-hidden relative">
         <div className="relative z-10">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,9 +145,9 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
           
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/10">
-              <p className="text-xs font-bold text-rose-200 uppercase tracking-widest mb-2">Student Signup Link (Public)</p>
+              <p className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-2">Student Signup Link (Public)</p>
               <div className="flex items-center justify-between gap-3">
-                <code className="text-sm truncate text-rose-50">{publicUrl}</code>
+                <code className="text-sm truncate text-indigo-50">{publicUrl}</code>
                 <button 
                   onClick={() => copyToClipboard(publicUrl, 'public')}
                   className="shrink-0 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -165,9 +165,9 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
             </div>
 
             <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/10">
-              <p className="text-xs font-bold text-rose-200 uppercase tracking-widest mb-2">Admin Dashboard Link (Secret)</p>
+              <p className="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-2">Admin Dashboard Link (Secret)</p>
               <div className="flex items-center justify-between gap-3">
-                <code className="text-sm truncate text-rose-50">{adminUrl}</code>
+                <code className="text-sm truncate text-indigo-50">{adminUrl}</code>
                 <button 
                   onClick={() => copyToClipboard(adminUrl, 'admin')}
                   className="shrink-0 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -205,7 +205,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                 <div className="flex gap-1 border-l pl-3 border-slate-200">
                   <button 
                     onClick={() => handleEditClick(session)}
-                    className="p-2 text-slate-400 hover:text-rose-900 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                     title="Edit Event Details"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +234,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                   {!session.isUnlimited && (
                     <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-rose-900 rounded-full transition-all duration-500" 
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500" 
                         style={{ width: `${Math.min(100, (session.participants.length / session.capacity) * 100)}%` }}
                       />
                     </div>
@@ -247,7 +247,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     session.participants.map((p, idx) => (
                       <li key={p.id} className="group flex justify-between text-sm items-center py-1">
                         <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-rose-100 text-rose-900 flex items-center justify-center text-[10px] font-bold">
+                          <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
                             {idx + 1}
                           </span>
                           <div>
@@ -271,7 +271,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                           </span>
                           <button 
                             onClick={() => handleRemoveClick(session.id, p, 'participants')}
-                            className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
+                            className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
                             title="Remove Student and Promote Waitlist"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,7 +311,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                         </div>
                         <button 
                           onClick={() => handleRemoveClick(session.id, p, 'waitlist')}
-                          className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
+                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
                           title="Remove from Waitlist"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
