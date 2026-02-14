@@ -61,6 +61,24 @@ export const seedDatabase = async () => {
 };
 
 /**
+ * Clears the sessions collection.
+ */
+export const clearDatabase = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
+    const batch = writeBatch(db);
+    querySnapshot.forEach((d) => {
+      batch.delete(d.ref);
+    });
+    await batch.commit();
+    console.log("Database cleared.");
+  } catch (error) {
+    console.error("Error clearing database:", error);
+    throw error;
+  }
+};
+
+/**
  * Listen for real-time changes to sessions
  */
 export const subscribeToSessions = (

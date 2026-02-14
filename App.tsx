@@ -12,7 +12,8 @@ import {
   updateSessionDetails, 
   seedDatabase, 
   addSessionDoc, 
-  deleteSessionDoc 
+  deleteSessionDoc,
+  clearDatabase
 } from './services/firebase';
 
 const App: React.FC = () => {
@@ -123,6 +124,19 @@ const App: React.FC = () => {
 
     const updatedSession = { ...session, participants: newParticipants, waitlist: newWaitlist };
     await updateSessionDoc(updatedSession);
+  };
+
+  const handleReset = async () => {
+    if (window.confirm("Are you sure you want to reset the application? This will clear all registrations and restore default sessions.")) {
+      try {
+        await clearDatabase();
+        await seedDatabase();
+        alert("App reset successfully.");
+      } catch (err) {
+        console.error(err);
+        alert("Reset failed. Check console for details.");
+      }
+    }
   };
 
   const handleSignUpClick = (id: string) => {
@@ -347,7 +361,7 @@ service cloud.firestore {
         {view === 'admin' && isAdminMode && (
           <ParticipantList 
             sessions={sessions} 
-            onReset={() => {}} 
+            onReset={handleReset} 
             onAddSession={addSessionDoc}
             onUpdateSession={updateSessionDetails}
             onDeleteSession={deleteSessionDoc}

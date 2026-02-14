@@ -19,7 +19,7 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     date: 'Thursday, March 5',
     time: '11:30 AM - 1:00 PM',
     location: 'SLS',
-    capacity: 6,
+    capacity: 0,
     participants: [],
     waitlist: []
   },
@@ -38,10 +38,10 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
   {
     id: 'mcconnell-2025',
     faculty: 'Michael McConnell',
-    date: 'to be scheduled with interested students',
+    date: 'TBD',
     time: 'TBD',
     location: 'Faculty Residence (His Home)',
-    capacity: 5,
+    capacity: 0,
     participants: [],
     waitlist: []
   }
