@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -64,6 +65,24 @@ export const seedDatabase = async () => {
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
+    throw error;
+  }
+};
+
+/**
+ * Clears the sessions collection.
+ */
+export const clearDatabase = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
+    const batch = writeBatch(db);
+    querySnapshot.forEach((d) => {
+      batch.delete(d.ref);
+    });
+    await batch.commit();
+    console.log("Database cleared.");
+  } catch (error) {
+    console.error("Error clearing database:", error);
     throw error;
   }
 };
