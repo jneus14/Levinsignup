@@ -1,5 +1,5 @@
 
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -13,10 +13,10 @@ import {
   query,
   limit
 } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
 import { DiscussionSession } from '../types';
 import { INITIAL_SESSIONS } from '../constants';
 
-// Project specific configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB0oQteZZT7k2AIEY0vuIPWiZQfSFxftDE",
   authDomain: "sls-levin-signups.firebaseapp.com",
@@ -27,14 +27,21 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Standard initialization for Firebase modular SDK
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Singleton pattern for Firebase initialization
+let app;
+try {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+} catch (error) {
+    console.error("Firebase initialization error:", error);
+    app = initializeApp(firebaseConfig, "fallback"); 
+}
+
+export const db: Firestore = getFirestore(app);
 
 const SESSIONS_COLLECTION = "sessions";
 
 /**
- * Seed the database with initial sessions if it's empty
+ * Seed the database with initial sessions if it's empty.
  */
 export const seedDatabase = async () => {
   try {
@@ -58,7 +65,7 @@ export const seedDatabase = async () => {
 };
 
 /**
- * Clears all sessions from the database
+ * Clears the sessions collection.
  */
 export const clearDatabase = async () => {
   try {
@@ -92,6 +99,7 @@ export const subscribeToSessions = (
       callback(sessions);
     },
     (error) => {
+      console.error("Firestore subscription error:", error);
       onError(error);
     }
   );

@@ -17,6 +17,7 @@ export interface DiscussionSession {
   location: string;
   capacity: number;
   isUnlimited?: boolean;
+  isActive?: boolean; // Controls whether the session is visible to students
   participants: Student[];
   waitlist: Student[];
 }

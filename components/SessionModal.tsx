@@ -8,18 +8,17 @@ interface SessionModalProps {
   onClose: () => void;
 }
 
-const DEFAULT_FORM_STATE = {
-  faculty: '',
-  topic: '',
-  date: '',
-  time: '',
-  location: '',
-  capacity: '10',
-  isUnlimited: false
-};
-
 export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSave, onClose }) => {
-  const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
+  const [formData, setFormData] = useState({
+    faculty: '',
+    topic: '',
+    date: '',
+    time: '',
+    location: '',
+    capacity: '10',
+    isUnlimited: false,
+    isActive: true
+  });
 
   useEffect(() => {
     if (initialSession) {
@@ -30,10 +29,9 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
         time: initialSession.time,
         location: initialSession.location,
         capacity: initialSession.capacity.toString(),
-        isUnlimited: !!initialSession.isUnlimited
+        isUnlimited: !!initialSession.isUnlimited,
+        isActive: initialSession.isActive !== false // Default to true if undefined
       });
-    } else {
-      setFormData(DEFAULT_FORM_STATE);
     }
   }, [initialSession]);
 
@@ -46,12 +44,14 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
       date: formData.date,
       time: formData.time,
       location: formData.location,
-      capacity: parseInt(formData.capacity, 10) || 0,
+      capacity: parseInt(formData.capacity, 10),
       isUnlimited: formData.isUnlimited,
+      isActive: formData.isActive,
       participants: initialSession?.participants || [],
       waitlist: initialSession?.waitlist || []
     };
     onSave(sessionData);
+    onClose();
   };
 
   return (
@@ -129,23 +129,36 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <input
                 disabled={formData.isUnlimited}
                 type="number"
-                min="1"
-                required={!formData.isUnlimited}
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 value={formData.capacity}
                 onChange={e => setFormData({...formData, capacity: e.target.value})}
               />
             </div>
-            <div className="col-span-1 flex items-end pb-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                  checked={formData.isUnlimited}
-                  onChange={e => setFormData({...formData, isUnlimited: e.target.checked})}
-                />
-                <span className="text-sm font-medium text-slate-700">Unlimited Spots</span>
-              </label>
+            
+            <div className="col-span-2 border-t border-slate-100 pt-3 mt-1 space-y-3">
+                <div className="flex items-center gap-2 cursor-pointer">
+                    <input
+                    type="checkbox"
+                    id="isUnlimited"
+                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                    checked={formData.isUnlimited}
+                    onChange={e => setFormData({...formData, isUnlimited: e.target.checked})}
+                    />
+                    <label htmlFor="isUnlimited" className="text-sm font-medium text-slate-700 cursor-pointer">Unlimited Spots</label>
+                </div>
+
+                <div className="flex items-center gap-2 cursor-pointer">
+                    <input
+                    type="checkbox"
+                    id="isActive"
+                    className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                    checked={formData.isActive}
+                    onChange={e => setFormData({...formData, isActive: e.target.checked})}
+                    />
+                    <label htmlFor="isActive" className="text-sm font-medium text-slate-700 cursor-pointer">
+                        Active Session <span className="text-slate-400 text-xs font-normal">(Visible to students)</span>
+                    </label>
+                </div>
             </div>
           </div>
 
