@@ -1,3 +1,4 @@
+
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -26,7 +27,7 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
+// Standard initialization for Firebase modular SDK
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
@@ -37,7 +38,6 @@ const SESSIONS_COLLECTION = "sessions";
  */
 export const seedDatabase = async () => {
   try {
-    // We use a query with limit(1) to check for existence efficiently
     const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
     const querySnapshot = await getDocs(q);
     
@@ -53,7 +53,24 @@ export const seedDatabase = async () => {
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
-    // Re-throw so the UI can catch permission-denied
+    throw error;
+  }
+};
+
+/**
+ * Clears all sessions from the database
+ */
+export const clearDatabase = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
+    const batch = writeBatch(db);
+    querySnapshot.forEach((d) => {
+      batch.delete(d.ref);
+    });
+    await batch.commit();
+    console.log("Database cleared.");
+  } catch (error) {
+    console.error("Error clearing database:", error);
     throw error;
   }
 };

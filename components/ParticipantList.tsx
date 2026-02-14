@@ -7,10 +7,10 @@ import { getSessionInsights } from '../services/gemini';
 interface ParticipantListProps {
   sessions: DiscussionSession[];
   onReset: () => void;
-  onAddSession: (session: DiscussionSession) => void;
-  onUpdateSession: (session: DiscussionSession) => void;
-  onDeleteSession: (sessionId: string) => void;
-  onRemoveParticipant: (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => void;
+  onAddSession: (session: DiscussionSession) => Promise<void>;
+  onUpdateSession: (session: DiscussionSession) => Promise<void>;
+  onDeleteSession: (sessionId: string) => Promise<void>;
+  onRemoveParticipant: (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => Promise<void>;
 }
 
 export const ParticipantList: React.FC<ParticipantListProps> = ({ 
@@ -26,6 +26,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   const [editingSession, setEditingSession] = useState<DiscussionSession | undefined>(undefined);
   const [insights, setInsights] = useState<string | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const [isOperating, setIsOperating] = useState(false);
 
   const getBaseUrl = () => {
     return window.location.origin + window.location.pathname;
@@ -42,16 +43,24 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (session: DiscussionSession) => {
+  const handleDeleteClick = async (session: DiscussionSession) => {
     if (window.confirm(`Are you sure you want to delete the session for ${session.faculty}? This will also delete all registered students and waitlist data.`)) {
-      onDeleteSession(session.id);
+      try {
+        await onDeleteSession(session.id);
+      } catch (err) {
+        alert("Delete failed. Please check permissions.");
+      }
     }
   };
 
-  const handleRemoveClick = (sessionId: string, student: Student, listType: 'participants' | 'waitlist') => {
+  const handleRemoveClick = async (sessionId: string, student: Student, listType: 'participants' | 'waitlist') => {
     const listLabel = listType === 'participants' ? 'active roster' : 'waitlist';
     if (window.confirm(`Remove ${student.name} from the ${listLabel}? If removed from the roster, the next student on the waitlist will be automatically promoted.`)) {
-      onRemoveParticipant(sessionId, student.id, listType);
+      try {
+        await onRemoveParticipant(sessionId, student.id, listType);
+      } catch (err) {
+        alert("Removal failed.");
+      }
     }
   };
 
@@ -60,13 +69,21 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSave = (session: DiscussionSession) => {
-    if (editingSession) {
-      onUpdateSession(session);
-    } else {
-      onAddSession(session);
+  const handleSave = async (session: DiscussionSession) => {
+    setIsOperating(true);
+    try {
+      if (editingSession) {
+        await onUpdateSession(session);
+      } else {
+        await onAddSession(session);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Save error:", err);
+      alert("Failed to save changes. Please check your database permissions.");
+    } finally {
+      setIsOperating(false);
     }
-    setIsModalOpen(false);
   };
 
   const handleGenerateAIInsights = async () => {
@@ -95,7 +112,11 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
             + Add New Session
           </button>
           <button 
-            onClick={onReset}
+            onClick={() => {
+              if (window.confirm("This will clear all current session data and re-seed defaults. Proceed?")) {
+                onReset();
+              }
+            }}
             className="px-4 py-2 text-sm font-semibold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors"
           >
             Reset App

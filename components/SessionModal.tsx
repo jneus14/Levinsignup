@@ -8,16 +8,18 @@ interface SessionModalProps {
   onClose: () => void;
 }
 
+const DEFAULT_FORM_STATE = {
+  faculty: '',
+  topic: '',
+  date: '',
+  time: '',
+  location: '',
+  capacity: '10',
+  isUnlimited: false
+};
+
 export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSave, onClose }) => {
-  const [formData, setFormData] = useState({
-    faculty: '',
-    topic: '',
-    date: '',
-    time: '',
-    location: '',
-    capacity: '10',
-    isUnlimited: false
-  });
+  const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
 
   useEffect(() => {
     if (initialSession) {
@@ -30,6 +32,8 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
         capacity: initialSession.capacity.toString(),
         isUnlimited: !!initialSession.isUnlimited
       });
+    } else {
+      setFormData(DEFAULT_FORM_STATE);
     }
   }, [initialSession]);
 
@@ -42,13 +46,12 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
       date: formData.date,
       time: formData.time,
       location: formData.location,
-      capacity: parseInt(formData.capacity, 10),
+      capacity: parseInt(formData.capacity, 10) || 0,
       isUnlimited: formData.isUnlimited,
       participants: initialSession?.participants || [],
       waitlist: initialSession?.waitlist || []
     };
     onSave(sessionData);
-    onClose();
   };
 
   return (
@@ -126,6 +129,8 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <input
                 disabled={formData.isUnlimited}
                 type="number"
+                min="1"
+                required={!formData.isUnlimited}
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 value={formData.capacity}
                 onChange={e => setFormData({...formData, capacity: e.target.value})}
