@@ -362,6 +362,7 @@ service cloud.firestore {
           <ParticipantList 
             sessions={sessions} 
             onReset={handleReset} 
+            onSeed={seedDatabase}
             onAddSession={addSessionDoc}
             onUpdateSession={updateSessionDetails}
             onDeleteSession={deleteSessionDoc}

@@ -35,6 +35,13 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Parse capacity safely
+    let parsedCapacity = parseInt(formData.capacity, 10);
+    if (isNaN(parsedCapacity) || parsedCapacity < 0) {
+      parsedCapacity = 0;
+    }
+
     const sessionData: DiscussionSession = {
       id: initialSession?.id || Math.random().toString(36).substr(2, 9),
       faculty: formData.faculty,
@@ -42,7 +49,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
       date: formData.date,
       time: formData.time,
       location: formData.location,
-      capacity: parseInt(formData.capacity, 10),
+      capacity: parsedCapacity,
       isUnlimited: formData.isUnlimited,
       participants: initialSession?.participants || [],
       waitlist: initialSession?.waitlist || []
@@ -126,6 +133,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
               <input
                 disabled={formData.isUnlimited}
                 type="number"
+                min="0"
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                 value={formData.capacity}
                 onChange={e => setFormData({...formData, capacity: e.target.value})}

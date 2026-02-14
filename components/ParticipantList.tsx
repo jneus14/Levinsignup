@@ -7,15 +7,17 @@ import { getSessionInsights } from '../services/gemini';
 interface ParticipantListProps {
   sessions: DiscussionSession[];
   onReset: () => void;
-  onAddSession: (session: DiscussionSession) => void;
-  onUpdateSession: (session: DiscussionSession) => void;
-  onDeleteSession: (sessionId: string) => void;
-  onRemoveParticipant: (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => void;
+  onSeed: () => Promise<void>;
+  onAddSession: (session: DiscussionSession) => Promise<void>;
+  onUpdateSession: (session: DiscussionSession) => Promise<void>;
+  onDeleteSession: (sessionId: string) => Promise<void>;
+  onRemoveParticipant: (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => Promise<void>;
 }
 
 export const ParticipantList: React.FC<ParticipantListProps> = ({ 
   sessions, 
   onReset, 
+  onSeed,
   onAddSession, 
   onUpdateSession,
   onDeleteSession,
@@ -26,6 +28,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   const [editingSession, setEditingSession] = useState<DiscussionSession | undefined>(undefined);
   const [insights, setInsights] = useState<string | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const getBaseUrl = () => {
     return window.location.origin + window.location.pathname;
@@ -42,16 +45,26 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleDeleteClick = (session: DiscussionSession) => {
+  const handleDeleteClick = async (session: DiscussionSession) => {
     if (window.confirm(`Are you sure you want to delete the session for ${session.faculty}? This will also delete all registered students and waitlist data.`)) {
-      onDeleteSession(session.id);
+      setActionLoading(true);
+      try {
+        await onDeleteSession(session.id);
+      } finally {
+        setActionLoading(false);
+      }
     }
   };
 
-  const handleRemoveClick = (sessionId: string, student: Student, listType: 'participants' | 'waitlist') => {
+  const handleRemoveClick = async (sessionId: string, student: Student, listType: 'participants' | 'waitlist') => {
     const listLabel = listType === 'participants' ? 'active roster' : 'waitlist';
     if (window.confirm(`Remove ${student.name} from the ${listLabel}? If removed from the roster, the next student on the waitlist will be automatically promoted.`)) {
-      onRemoveParticipant(sessionId, student.id, listType);
+      setActionLoading(true);
+      try {
+        await onRemoveParticipant(sessionId, student.id, listType);
+      } finally {
+        setActionLoading(false);
+      }
     }
   };
 
@@ -60,13 +73,34 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSave = (session: DiscussionSession) => {
-    if (editingSession) {
-      onUpdateSession(session);
-    } else {
-      onAddSession(session);
+  const handleSave = async (session: DiscussionSession) => {
+    setActionLoading(true);
+    try {
+      if (editingSession) {
+        await onUpdateSession(session);
+      } else {
+        await onAddSession(session);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("Failed to save session. Check your connection.");
+      console.error(error);
+    } finally {
+      setActionLoading(false);
     }
-    setIsModalOpen(false);
+  };
+
+  const handleSeedClick = async () => {
+    setActionLoading(true);
+    try {
+      await onSeed();
+      alert("Missing sessions restored.");
+    } catch (error) {
+      alert("Failed to restore sessions.");
+      console.error(error);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleGenerateAIInsights = async () => {
@@ -87,16 +121,25 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
           <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
           <p className="text-slate-500">Manage registrations and share links</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={handleAddClick}
-            className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+            disabled={actionLoading}
+            className="px-4 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md disabled:opacity-50"
           >
             + Add New Session
           </button>
           <button 
+            onClick={handleSeedClick}
+            disabled={actionLoading}
+            className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+          >
+            Restore Missing
+          </button>
+          <button 
             onClick={onReset}
-            className="px-4 py-2 text-sm font-semibold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors"
+            disabled={actionLoading}
+            className="px-4 py-2 text-sm font-semibold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors disabled:opacity-50"
           >
             Reset App
           </button>

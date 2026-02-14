@@ -11,7 +11,8 @@ import {
   writeBatch, 
   deleteDoc,
   query,
-  limit
+  limit,
+  getDoc
 } from "firebase/firestore";
 import { DiscussionSession } from "../types";
 import { INITIAL_SESSIONS } from "../constants";
@@ -35,23 +36,28 @@ export const db = getFirestore(app);
 const SESSIONS_COLLECTION = "sessions";
 
 /**
- * Seed the database with initial sessions if it's empty
+ * Seed the database with initial sessions.
+ * Checks for missing sessions from INITIAL_SESSIONS and adds them if they don't exist.
  */
 export const seedDatabase = async () => {
   try {
-    // We use a query with limit(1) to check for existence efficiently
-    const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      console.log("Database empty. Seeding initial sessions...");
-      const batch = writeBatch(db);
-      INITIAL_SESSIONS.forEach((session) => {
-        const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+    const batch = writeBatch(db);
+    let hasChanges = false;
+
+    for (const session of INITIAL_SESSIONS) {
+      const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        console.log(`Adding missing session: ${session.faculty}`);
         batch.set(docRef, session);
-      });
+        hasChanges = true;
+      }
+    }
+    
+    if (hasChanges) {
       await batch.commit();
-      console.log("Seeding complete.");
+      console.log("Database seeded with new sessions.");
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
