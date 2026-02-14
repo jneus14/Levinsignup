@@ -5,7 +5,6 @@ import { SessionCard } from './components/SessionCard';
 import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
-import { SignupEmailModal } from './components/SignupEmailModal';
 import { 
   subscribeToSessions, 
   updateSessionDoc, 
@@ -28,7 +27,6 @@ const App: React.FC = () => {
   } | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
-  const [showSignupEmail, setShowSignupEmail] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -166,7 +164,6 @@ const App: React.FC = () => {
       setActiveSessionId(null);
       setLastRegistered({ student: newStudent, session: targetSession, isWaitlist });
       setView('success');
-      setShowSignupEmail(true);
     } catch (error) {
       alert("Registration failed. This usually happens if the database is in Locked Mode.");
     }
@@ -238,17 +235,6 @@ service cloud.firestore {
           student={promotionNotify.student}
           session={promotionNotify.session}
           onClose={() => setPromotionNotify(null)}
-        />
-      )}
-
-      {showSignupEmail && lastRegistered && (
-        <SignupEmailModal 
-          student={lastRegistered.student}
-          session={lastRegistered.session}
-          isWaitlist={lastRegistered.isWaitlist}
-          cancelUrl={getCancellationUrl()}
-          calendarUrl={getGoogleCalendarUrl(lastRegistered.session)}
-          onClose={() => setShowSignupEmail(false)}
         />
       )}
 
@@ -332,7 +318,9 @@ service cloud.firestore {
                </div>
                <h2 className="text-4xl font-black text-indigo-950 mb-4 tracking-tight">Registration Complete</h2>
                <p className="text-xl text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed">
-                 You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>. A confirmation email has been dispatched.
+                 You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>.
+                 <br/><br/>
+                 <span className="font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-lg border border-rose-100">Please Note: No confirmation email will be sent.</span>
                </p>
                
                <div className="bg-amber-50 rounded-3xl p-8 mb-10 text-left border border-amber-100 shadow-sm relative overflow-hidden">
@@ -345,11 +333,25 @@ service cloud.firestore {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Important: Manage Your Spot
+                    CRITICAL: Save Your Cancellation Link
                   </p>
-                  <p className="text-sm text-amber-900 leading-relaxed mb-4">If you cannot attend, please save this cancellation link to open your spot for another student:</p>
-                  <div className="bg-white/60 p-4 rounded-xl font-mono text-xs break-all text-amber-800 border border-amber-200/50 select-all">
-                    {getCancellationUrl()}
+                  <p className="text-sm text-amber-900 leading-relaxed mb-4">
+                    Since you will not receive an email, you <strong>must save the link below</strong>. It is the only way to cancel your registration if you cannot attend.
+                  </p>
+                  <div className="bg-white/60 p-4 rounded-xl font-mono text-xs break-all text-amber-800 border border-amber-200/50 select-all flex justify-between items-center gap-4">
+                    <span>{getCancellationUrl()}</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(getCancellationUrl());
+                        alert("Link copied to clipboard!");
+                      }}
+                      className="bg-white/50 hover:bg-white text-amber-700 p-2 rounded-lg transition-colors"
+                      title="Copy to Clipboard"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                    </button>
                   </div>
                </div>
                
