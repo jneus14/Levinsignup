@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { DiscussionSession, ViewState, Student } from './types';
 import { SessionCard } from './components/SessionCard';
@@ -6,7 +5,7 @@ import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc, clearDatabase } from './services/firebase';
+import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
 
 const ADMIN_PASSCODE = "levin2025";
 
@@ -99,6 +98,7 @@ const App: React.FC = () => {
       const [sessionId, studentId] = cancelParam.split(':');
       if (sessionId && studentId) {
         handleCancellation(sessionId, studentId);
+        // Clear params after handling
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -129,6 +129,7 @@ const App: React.FC = () => {
 
     if (listType === 'participants') {
       newParticipants = newParticipants.filter(p => p.id !== studentId);
+      // Promote from waitlist if not unlimited and below capacity
       if (!session.isUnlimited && newParticipants.length < session.capacity && newWaitlist.length > 0) {
         const [nextInLine, ...remainingWaitlist] = newWaitlist;
         const promotedStudent = { ...nextInLine, isPromoted: true };
@@ -142,18 +143,6 @@ const App: React.FC = () => {
 
     const updatedSession = { ...session, participants: newParticipants, waitlist: newWaitlist };
     await updateSessionDoc(updatedSession);
-  };
-
-  const handleReset = async () => {
-    if (window.confirm("Are you sure you want to reset the application? This will clear all registrations and restore default sessions.")) {
-      try {
-        await clearDatabase();
-        await seedDatabase();
-        alert("App reset successfully.");
-      } catch (err) {
-        alert("Reset failed. Check console for details.");
-      }
-    }
   };
 
   const handleAuthSubmit = (e: React.FormEvent) => {
@@ -219,6 +208,8 @@ const App: React.FC = () => {
   };
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
+
+  // Filter visible sessions for Browse mode
   const visibleSessions = sessions.filter(session => session.isActive !== false);
 
   return (
@@ -390,7 +381,7 @@ const App: React.FC = () => {
         {view === 'admin' && isAuthenticated && (
           <ParticipantList 
             sessions={sessions} 
-            onReset={handleReset} 
+            onReset={() => {}} 
             onAddSession={addSessionDoc}
             onUpdateSession={updateSessionDoc}
             onDeleteSession={deleteSessionDoc}

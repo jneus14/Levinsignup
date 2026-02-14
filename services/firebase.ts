@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -28,11 +27,13 @@ const firebaseConfig = {
 };
 
 // Singleton pattern for Firebase initialization
+// Using try-catch to handle potential initialization race conditions
 let app;
 try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 } catch (error) {
     console.error("Firebase initialization error:", error);
+    // Fallback if getApp fails unexpectedly
     app = initializeApp(firebaseConfig, "fallback"); 
 }
 
@@ -42,6 +43,7 @@ const SESSIONS_COLLECTION = "sessions";
 
 /**
  * Seed the database with initial sessions if it's empty.
+ * This ensures data persistence and prevents overwriting user data on app reload.
  */
 export const seedDatabase = async () => {
   try {
@@ -56,28 +58,12 @@ export const seedDatabase = async () => {
         batch.set(docRef, session);
       });
       await batch.commit();
-      console.log("Seeding complete.");
+      console.log("Seeding complete. Data is now securely stored in Firestore.");
+    } else {
+        console.log("Database already initialized. Skipping seed to preserve user data.");
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
-    throw error;
-  }
-};
-
-/**
- * Clears the sessions collection.
- */
-export const clearDatabase = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
-    const batch = writeBatch(db);
-    querySnapshot.forEach((d) => {
-      batch.delete(d.ref);
-    });
-    await batch.commit();
-    console.log("Database cleared.");
-  } catch (error) {
-    console.error("Error clearing database:", error);
     throw error;
   }
 };

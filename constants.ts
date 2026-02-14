@@ -41,10 +41,10 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
   {
     id: 'mcconnell-2025',
     faculty: 'Michael McConnell',
-    date: 'To be scheduled',
+    date: 'to be scheduled with interested students',
     time: 'TBD',
     location: 'Faculty Residence (His Home)',
-    capacity: 1,
+    capacity: 0,
     isActive: true,
     participants: [],
     waitlist: []
