@@ -17,10 +17,8 @@ export interface DiscussionSession {
   location: string;
   capacity: number;
   isUnlimited?: boolean;
-  isActive?: boolean; // Controls whether the session is visible to students
   participants: Student[];
   waitlist: Student[];
 }
 
-// Added 'canceled' to ViewState to reflect the view state used in App.tsx
-export type ViewState = 'browse' | 'success' | 'admin' | 'canceled';
+export type ViewState = 'browse' | 'success' | 'admin';

@@ -1,22 +1,11 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  onSnapshot, 
-  updateDoc, 
-  setDoc, 
-  getDocs, 
-  writeBatch, 
-  deleteDoc,
-  query,
-  limit,
-  runTransaction,
-  type Firestore
-} from 'firebase/firestore';
-import { DiscussionSession, Student } from '../types';
-import { INITIAL_SESSIONS } from '../constants';
 
+// Fix: Use named import for initializeApp instead of star import to resolve "Property 'initializeApp' does not exist" error
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
+import { DiscussionSession } from "../types";
+import { INITIAL_SESSIONS } from "../constants";
+
+// Updated with project specific details
 const firebaseConfig = {
   apiKey: "AIzaSyB0oQteZZT7k2AIEY0vuIPWiZQfSFxftDE",
   authDomain: "sls-levin-signups.firebaseapp.com",
@@ -27,40 +16,30 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Singleton pattern for Firebase initialization
-let app;
-try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-} catch (error) {
-    console.error("Firebase initialization error:", error);
-    // Fallback if getApp fails unexpectedly
-    app = initializeApp(firebaseConfig, "fallback"); 
-}
-
-export const db: Firestore = getFirestore(app);
+// Fix: Initialize Firebase using the standard modular SDK pattern
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
 
 const SESSIONS_COLLECTION = "sessions";
 
 /**
- * Seed the database with initial sessions if it's empty.
+ * Seed the database with initial sessions if it's empty
  */
 export const seedDatabase = async () => {
   try {
-    const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
-    const querySnapshot = await getDocs(q);
-    
+    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
     if (querySnapshot.empty) {
       console.log("Database empty. Seeding initial sessions...");
       const batch = writeBatch(db);
       INITIAL_SESSIONS.forEach((session) => {
-        const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+        const docRef = doc(collection(db, SESSIONS_COLLECTION), session.id);
         batch.set(docRef, session);
       });
       await batch.commit();
       console.log("Seeding complete.");
     }
-  } catch (error: any) {
-    console.error("Error during database seeding:", error);
+  } catch (error) {
+    console.error("Error seeding database: ", error);
     throw error;
   }
 };
@@ -88,69 +67,19 @@ export const subscribeToSessions = (
   );
 };
 
+/**
+ * Update a specific session document
+ */
 export const updateSessionDoc = async (session: DiscussionSession) => {
   const docRef = doc(db, SESSIONS_COLLECTION, session.id);
   await updateDoc(docRef, { ...session });
 };
 
-export const addSessionDoc = async (session: DiscussionSession) => {
-  const docRef = doc(db, SESSIONS_COLLECTION, session.id);
-  await setDoc(docRef, session);
-};
-
+/**
+ * Delete a specific session document
+ */
 export const deleteSessionDoc = async (sessionId: string) => {
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
+  // Fix: Complete the implementation to actually delete the document
   await deleteDoc(docRef);
-};
-
-/**
- * Register a student for a session using a transaction to prevent race conditions.
- */
-export const registerStudent = async (sessionId: string, name: string, email: string, classYear: string) => {
-  const sessionRef = doc(db, SESSIONS_COLLECTION, sessionId);
-
-  return await runTransaction(db, async (transaction) => {
-    const sessionDoc = await transaction.get(sessionRef);
-    if (!sessionDoc.exists()) {
-      throw new Error("Session not found");
-    }
-
-    const session = sessionDoc.data() as DiscussionSession;
-
-    // Case-insensitive email check
-    const emailLower = email.toLowerCase().trim();
-    const isRegistered = session.participants.some(p => p.email.toLowerCase() === emailLower);
-    const isWaitlisted = session.waitlist.some(p => p.email.toLowerCase() === emailLower);
-
-    if (isRegistered || isWaitlisted) {
-      throw new Error("You are already registered for this session.");
-    }
-
-    const isFull = !session.isUnlimited && session.participants.length >= session.capacity;
-    
-    const newStudent: Student = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: name.trim(),
-      email: email.trim(),
-      classYear,
-      timestamp: Date.now()
-    };
-
-    const updates: Partial<DiscussionSession> = {};
-
-    if (isFull) {
-      updates.waitlist = [...session.waitlist, newStudent];
-    } else {
-      updates.participants = [...session.participants, newStudent];
-    }
-
-    transaction.update(sessionRef, updates);
-
-    // Return the updated state context for the UI
-    return { 
-      student: newStudent, 
-      session: { ...session, ...updates } as DiscussionSession,
-      isWaitlist: isFull 
-    };
-  });
 };
