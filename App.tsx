@@ -1,110 +1,98 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DiscussionSession, ViewState, Student } from './types';
 import { SessionCard } from './components/SessionCard';
 import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { subscribeToSessions, updateSessionDoc, seedDatabase, deleteSessionDoc, addSessionDoc } from './services/firebase';
-
-const ADMIN_PASSCODE = "levin2025"; // Default passcode
+import { db, subscribeToSessions, updateSessionDoc, seedDatabase } from './services/firebase';
+import { doc, deleteDoc, setDoc } from "firebase/firestore";
 
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<DiscussionSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [view, setView] = useState<ViewState>('browse'); 
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
   const [lastRegistered, setLastRegistered] = useState<{ 
     student: Student;
     session: DiscussionSession; 
     isWaitlist: boolean;
   } | null>(null);
-  
-  // Auth state
   const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('admin_authenticated') === 'true';
-  });
-  const [passcodeAttempt, setPasscodeAttempt] = useState('');
-  const [authError, setAuthError] = useState(false);
-
   const [promotionNotify, setPromotionNotify] = useState<{ student: Student; session: DiscussionSession } | null>(null);
   const [showSignupEmail, setShowSignupEmail] = useState(false);
 
-  const connectToDatabase = useCallback(async () => {
-    setIsRetrying(true);
-    try {
-      await seedDatabase();
-      setError(null);
-      const unsubscribe = subscribeToSessions(
-        (data) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        await seedDatabase();
+        if (isMounted) setError(null);
+      } catch (e: any) {
+        console.error("Initialization Error:", e);
+        if (isMounted) {
+          setError({ 
+            message: e.code === 'permission-denied' 
+              ? "Access denied. Please check your Firestore Security Rules." 
+              : "Failed to connect to database.", 
+            code: e.code 
+          });
+        }
+      }
+    };
+
+    init();
+
+    const unsubscribe = subscribeToSessions(
+      (data) => {
+        if (isMounted) {
           setSessions(data);
-          setError(null);
-          setIsRetrying(false);
-        },
-        (err) => {
-          console.error("Subscription Error:", err);
+          setError(null); // Clear error on successful data arrival
+        }
+      },
+      (err) => {
+        console.error("Subscription Error:", err);
+        if (isMounted) {
           setError({ 
             message: err.code === 'permission-denied'
               ? "Database is locked. Security rules update required."
-              : "Real-time updates failed. Check your internet connection.", 
+              : "Real-time updates failed.", 
             code: err.code 
           });
-          setIsRetrying(false);
         }
-      );
-      return unsubscribe;
-    } catch (e: any) {
-      console.error("Initialization Error:", e);
-      setError({ 
-        message: e.code === 'permission-denied' 
-          ? "Access denied. Please check your Firestore Security Rules." 
-          : "Failed to connect to Firestore service. Ensure the project is active.", 
-        code: e.code 
-      });
-      setIsRetrying(false);
-      return () => {};
-    }
-  }, []);
-
-  useEffect(() => {
-    let unsubscribe: () => void = () => {};
-    const init = async () => {
-      const unsub = await connectToDatabase();
-      unsubscribe = unsub;
-    };
-    init();
+      }
+    );
 
     const params = new URLSearchParams(window.location.search);
     if (params.has('admin')) {
       setIsAdminMode(true);
-      if (isAuthenticated) setView('admin');
     }
 
-    return () => unsubscribe();
-  }, [connectToDatabase, isAuthenticated]);
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passcodeAttempt === ADMIN_PASSCODE) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('admin_authenticated', 'true');
-      setView('admin');
-      setAuthError(false);
-    } else {
-      setAuthError(true);
-      setPasscodeAttempt('');
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const cancelData = params.get('cancel');
+    if (cancelData && sessions.length > 0) {
+      const [sId, pId] = cancelData.split(':');
+      const session = sessions.find(s => s.id === sId);
+      if (session) {
+        const isInParticipants = session.participants.some(p => p.id === pId);
+        const isInWaitlist = session.waitlist.some(p => p.id === pId);
+        if (isInParticipants || isInWaitlist) {
+          const listType = isInParticipants ? 'participants' : 'waitlist';
+          performRemoval(sId, pId, listType);
+          setView('canceled');
+          window.history.replaceState({}, '', window.location.pathname + (isAdminMode ? '?admin=true' : ''));
+        }
+      }
     }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('admin_authenticated');
-    setView('browse');
-    // Clear admin from URL
-    window.history.replaceState({}, '', window.location.pathname);
-  };
+  }, [sessions]);
 
   const performRemoval = async (sessionId: string, studentId: string, listType: 'participants' | 'waitlist') => {
     const session = sessions.find(s => s.id === sessionId);
@@ -159,7 +147,7 @@ const App: React.FC = () => {
       setView('success');
       setShowSignupEmail(true);
     } catch (error) {
-      alert("Registration failed. Please try again later.");
+      alert("Registration failed. This usually happens if the database is in Locked Mode.");
     }
   };
 
@@ -175,27 +163,51 @@ const App: React.FC = () => {
   const activeSession = sessions.find(s => s.id === activeSessionId);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 font-sans flex flex-col">
+    <div className="min-h-screen bg-slate-50 pb-20 font-sans">
       {/* Permission Error Banner */}
-      {error && (
+      {error && (error.code === 'permission-denied') && (
         <div className="bg-rose-600 border-b border-rose-700 p-6 sticky top-0 z-[60] shadow-2xl animate-in slide-in-from-top duration-500">
           <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-6 items-center">
             <div className="bg-white/20 p-3 rounded-2xl text-white">
-              <svg className={`w-8 h-8 ${isRetrying ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m0-6V7m0 11.333V21m-6.938-4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <div className="flex-1 text-white">
-              <h3 className="text-xl font-black mb-1 tracking-tight">Database Connectivity Alert</h3>
-              <p className="text-rose-100 text-sm">{error.message}</p>
+              <h3 className="text-xl font-black mb-1 tracking-tight">Database Locked (Permission Denied)</h3>
+              <p className="text-rose-100 text-sm mb-4">
+                You must update your **Firestore Security Rules** in the Firebase Console to allow the app to work.
+              </p>
+              <div className="relative group max-w-lg">
+                <pre className="bg-rose-950 text-rose-200 p-4 rounded-xl text-[10px] font-mono overflow-x-auto border border-rose-800 shadow-inner">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`}
+                </pre>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}`);
+                    alert("Rules copied to clipboard!");
+                  }}
+                  className="absolute top-2 right-2 bg-white text-rose-600 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-all shadow-sm"
+                >
+                  Copy Rules
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={() => connectToDatabase()}
-              disabled={isRetrying}
+            <a 
+              href="https://console.firebase.google.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
               className="px-6 py-3 bg-white text-rose-600 font-black rounded-xl hover:scale-105 transition-all text-sm uppercase tracking-widest shadow-lg"
             >
-              {isRetrying ? 'Retrying...' : 'Retry Connection'}
-            </button>
+              Open Firebase Console
+            </a>
           </div>
         </div>
       )}
@@ -235,43 +247,27 @@ const App: React.FC = () => {
               <button 
                 onClick={() => setView('browse')}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  view === 'browse' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
+                  view !== 'admin' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 Browse
               </button>
-              {(isAdminMode || isAuthenticated) && (
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => {
-                      if (isAuthenticated) setView('admin');
-                      else setIsAdminMode(true);
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      view === 'admin' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    Admin
-                  </button>
-                  {isAuthenticated && (
-                    <button 
-                      onClick={handleLogout}
-                      className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
-                      title="Logout"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+              {isAdminMode && (
+                <button 
+                  onClick={() => setView('admin')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    view === 'admin' ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  Admin
+                </button>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-12 flex-grow w-full">
+      <main className="max-w-6xl mx-auto px-4 py-12">
         {view === 'browse' && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {sessions.map(session => (
@@ -283,67 +279,26 @@ const App: React.FC = () => {
                 <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Connecting to Cloud Firestore...</p>
               </div>
             )}
-          </div>
-        )}
-
-        {(isAdminMode || view === 'admin') && !isAuthenticated && (
-          <div className="max-w-md mx-auto py-20 animate-in fade-in zoom-in duration-500">
-            <div className="bg-white rounded-3xl p-10 shadow-2xl border border-slate-200">
-              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m0-6V7m0 11.333V21m-6.938-4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-black text-center text-slate-900 mb-2">Admin Access</h2>
-              <p className="text-slate-500 text-center mb-8">Please enter the administrative passcode to continue.</p>
-              
-              <form onSubmit={handleAuthSubmit} className="space-y-4">
-                <div>
-                  <input
-                    type="password"
-                    placeholder="Enter Passcode"
-                    className={`w-full px-5 py-3 border-2 rounded-2xl outline-none transition-all font-semibold text-center tracking-widest ${
-                      authError ? 'border-rose-300 bg-rose-50' : 'border-slate-100 focus:border-indigo-500'
-                    }`}
-                    value={passcodeAttempt}
-                    onChange={(e) => {
-                      setPasscodeAttempt(e.target.value);
-                      setAuthError(false);
-                    }}
-                    autoFocus
-                  />
-                  {authError && <p className="text-rose-600 text-[10px] font-black uppercase text-center mt-2 tracking-widest">Incorrect Passcode</p>}
+            {sessions.length === 0 && error && error.code !== 'permission-denied' && (
+              <div className="col-span-full py-20 text-center">
+                <div className="bg-slate-200 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
                 </div>
-                <button 
-                  type="submit"
-                  className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase tracking-widest text-sm"
-                >
-                  Unlock Dashboard
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setIsAdminMode(false);
-                    setView('browse');
-                  }}
-                  className="w-full py-2 text-slate-400 font-bold text-xs uppercase tracking-widest"
-                >
-                  Cancel
-                </button>
-              </form>
-            </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Service Offline</h3>
+                <p className="text-slate-500 max-w-sm mx-auto italic">{error.message}</p>
+              </div>
+            )}
           </div>
         )}
 
-        {view === 'admin' && isAuthenticated && (
-          <ParticipantList 
-            sessions={sessions} 
-            onReset={() => {}} 
-            onAddSession={addSessionDoc}
-            onUpdateSession={updateSessionDoc}
-            onDeleteSession={deleteSessionDoc}
-            onRemoveParticipant={performRemoval}
-          />
+        {view === 'canceled' && (
+          <div className="max-w-xl mx-auto text-center py-20">
+            <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Registration Vacated</h2>
+            <p className="text-lg text-slate-600 mb-10">Your spot has been successfully removed and the next student notified.</p>
+            <button onClick={() => setView('browse')} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100">Return Home</button>
+          </div>
         )}
 
         {view === 'success' && lastRegistered && (
@@ -356,38 +311,43 @@ const App: React.FC = () => {
                </div>
                <h2 className="text-4xl font-black text-indigo-950 mb-4 tracking-tight">Registration Complete</h2>
                <p className="text-xl text-slate-600 mb-8 max-w-lg mx-auto leading-relaxed">
-                 You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>.
+                 You are all set for the session with <strong>{lastRegistered.session.faculty}</strong>. A confirmation email has been dispatched.
                </p>
+               
+               <div className="bg-amber-50 rounded-3xl p-8 mb-10 text-left border border-amber-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 100-16 8 8 0 000 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z" />
+                    </svg>
+                  </div>
+                  <p className="text-[11px] font-black text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Important: Manage Your Spot
+                  </p>
+                  <p className="text-sm text-amber-900 leading-relaxed mb-4">If you cannot attend, please save this cancellation link to open your spot for another student:</p>
+                  <div className="bg-white/60 p-4 rounded-xl font-mono text-xs break-all text-amber-800 border border-amber-200/50 select-all">
+                    {getCancellationUrl()}
+                  </div>
+               </div>
+               
                <button onClick={() => setView('browse')} className="px-12 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-200 transition-all hover:scale-105">Back to Browse</button>
             </div>
           </div>
         )}
 
-        {view === 'canceled' && (
-          <div className="max-w-xl mx-auto text-center py-20">
-            <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Registration Vacated</h2>
-            <p className="text-lg text-slate-600 mb-10">Your spot has been successfully removed.</p>
-            <button onClick={() => setView('browse')} className="px-10 py-4 bg-indigo-600 text-white font-black rounded-2xl shadow-xl shadow-indigo-100">Return Home</button>
-          </div>
+        {view === 'admin' && isAdminMode && (
+          <ParticipantList 
+            sessions={sessions} 
+            onReset={() => {}} 
+            onAddSession={async (s) => await setDoc(doc(db, "sessions", s.id), s)}
+            onUpdateSession={updateSessionDoc}
+            onDeleteSession={async (id) => await deleteDoc(doc(db, "sessions", id))}
+            onRemoveParticipant={performRemoval}
+          />
         )}
       </main>
-
-      <footer className="mt-auto py-12 border-t border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-slate-400 text-sm font-medium">© 2025 Stanford Law School Levin Center</p>
-          <div className="flex gap-6">
-            <button 
-              onClick={() => {
-                if (isAuthenticated) setView('admin');
-                else setIsAdminMode(true);
-              }}
-              className="text-slate-300 hover:text-indigo-600 text-xs font-bold uppercase tracking-[0.2em] transition-colors"
-            >
-              Admin Portal
-            </button>
-          </div>
-        </div>
-      </footer>
 
       {activeSession && (
         <SignUpForm 

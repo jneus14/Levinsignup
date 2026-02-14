@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp } from "firebase/app";
 import { 
   getFirestore, 
   collection, 
@@ -11,9 +11,9 @@ import {
   deleteDoc,
   query,
   limit
-} from 'firebase/firestore';
-import { DiscussionSession } from '../types';
-import { INITIAL_SESSIONS } from '../constants';
+} from "firebase/firestore";
+import { DiscussionSession } from "../types";
+import { INITIAL_SESSIONS } from "../constants";
 
 // Project specific configuration
 const firebaseConfig = {
@@ -26,7 +26,8 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
+// Standard initialization for Firebase modular SDK
+// The initializeApp function is exported from "firebase/app" in Firebase v9+
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
@@ -86,14 +87,6 @@ export const subscribeToSessions = (
 export const updateSessionDoc = async (session: DiscussionSession) => {
   const docRef = doc(db, SESSIONS_COLLECTION, session.id);
   await updateDoc(docRef, { ...session });
-};
-
-/**
- * Add a new session document
- */
-export const addSessionDoc = async (session: DiscussionSession) => {
-  const docRef = doc(db, SESSIONS_COLLECTION, session.id);
-  await setDoc(docRef, session);
 };
 
 /**

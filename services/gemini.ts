@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { DiscussionSession } from "../types";
 
@@ -6,8 +7,8 @@ import { DiscussionSession } from "../types";
  */
 export const getSessionInsights = async (sessions: DiscussionSession[]): Promise<string> => {
   try {
-    // Initialize GoogleGenAI with a named parameter object right before use
-    const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+    // Fix: Always initialize GoogleGenAI with a named parameter object
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     // Prepare a concise representation of the roster for the prompt
     const summaryData = sessions.map(s => ({
@@ -18,19 +19,19 @@ export const getSessionInsights = async (sessions: DiscussionSession[]): Promise
       demographics: s.participants.map(p => p.classYear)
     }));
 
-    // Generate content using the correct model name and system instruction in config
+    const prompt = `You are an administrative assistant for Stanford Law School's Levin Center. 
+    Analyze the following faculty discussion signup data and provide a professional 3-sentence summary.
+    Highlight the most popular sessions and any notable trends in student class years (e.g., 1L vs 3L interest).
+    
+    Data: ${JSON.stringify(summaryData)}`;
+
+    // Fix: Use the correct model name and explicit GenerateContentResponse type
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Analyze the following faculty discussion signup data and provide a professional 3-sentence summary.
-Highlight the most popular sessions and any notable trends in student class years (e.g., 1L vs 3L interest).
-
-Data: ${JSON.stringify(summaryData)}`,
-      config: {
-        systemInstruction: "You are an administrative assistant for Stanford Law School's Levin Center.",
-      },
+      contents: prompt,
     });
 
-    // Access the .text property directly (not as a method)
+    // Fix: Access the .text property directly (not as a method) as per the latest SDK guidelines
     return response.text || "No insights could be generated from the current data.";
   } catch (error) {
     console.error("Gemini Insight Generation Error:", error);
