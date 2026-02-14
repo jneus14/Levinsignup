@@ -1,11 +1,21 @@
+import { initializeApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  onSnapshot, 
+  updateDoc, 
+  setDoc, 
+  getDocs, 
+  writeBatch, 
+  deleteDoc,
+  query,
+  limit
+} from 'firebase/firestore';
+import { DiscussionSession } from '../types';
+import { INITIAL_SESSIONS } from '../constants';
 
-// Fix: Use named import for initializeApp instead of star import to resolve "Property 'initializeApp' does not exist" error
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, onSnapshot, updateDoc, setDoc, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
-import { DiscussionSession } from "../types";
-import { INITIAL_SESSIONS } from "../constants";
-
-// Updated with project specific details
+// Project specific configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB0oQteZZT7k2AIEY0vuIPWiZQfSFxftDE",
   authDomain: "sls-levin-signups.firebaseapp.com",
@@ -16,7 +26,7 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Fix: Initialize Firebase using the standard modular SDK pattern
+// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
@@ -27,19 +37,23 @@ const SESSIONS_COLLECTION = "sessions";
  */
 export const seedDatabase = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
+    // We use a query with limit(1) to check for existence efficiently
+    const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
+    const querySnapshot = await getDocs(q);
+    
     if (querySnapshot.empty) {
       console.log("Database empty. Seeding initial sessions...");
       const batch = writeBatch(db);
       INITIAL_SESSIONS.forEach((session) => {
-        const docRef = doc(collection(db, SESSIONS_COLLECTION), session.id);
+        const docRef = doc(db, SESSIONS_COLLECTION, session.id);
         batch.set(docRef, session);
       });
       await batch.commit();
       console.log("Seeding complete.");
     }
-  } catch (error) {
-    console.error("Error seeding database: ", error);
+  } catch (error: any) {
+    console.error("Error during database seeding:", error);
+    // Re-throw so the UI can catch permission-denied
     throw error;
   }
 };
@@ -61,7 +75,6 @@ export const subscribeToSessions = (
       callback(sessions);
     },
     (error) => {
-      console.error("Firestore subscription error:", error);
       onError(error);
     }
   );
@@ -76,10 +89,17 @@ export const updateSessionDoc = async (session: DiscussionSession) => {
 };
 
 /**
+ * Add a new session document
+ */
+export const addSessionDoc = async (session: DiscussionSession) => {
+  const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+  await setDoc(docRef, session);
+};
+
+/**
  * Delete a specific session document
  */
 export const deleteSessionDoc = async (sessionId: string) => {
   const docRef = doc(db, SESSIONS_COLLECTION, sessionId);
-  // Fix: Complete the implementation to actually delete the document
   await deleteDoc(docRef);
 };
