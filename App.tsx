@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DiscussionSession, ViewState, Student } from './types';
 import { SessionCard } from './components/SessionCard';
@@ -5,8 +6,14 @@ import { SignUpForm } from './components/SignUpForm';
 import { ParticipantList } from './components/ParticipantList';
 import { PromotionEmailModal } from './components/PromotionEmailModal';
 import { SignupEmailModal } from './components/SignupEmailModal';
-import { db, subscribeToSessions, updateSessionDoc, seedDatabase } from './services/firebase';
-import { doc, deleteDoc, setDoc } from "firebase/firestore";
+import { 
+  subscribeToSessions, 
+  updateSessionDoc, 
+  updateSessionDetails, 
+  seedDatabase, 
+  addSessionDoc, 
+  deleteSessionDoc 
+} from './services/firebase';
 
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<DiscussionSession[]>([]);
@@ -341,9 +348,9 @@ service cloud.firestore {
           <ParticipantList 
             sessions={sessions} 
             onReset={() => {}} 
-            onAddSession={async (s) => await setDoc(doc(db, "sessions", s.id), s)}
-            onUpdateSession={updateSessionDoc}
-            onDeleteSession={async (id) => await deleteDoc(doc(db, "sessions", id))}
+            onAddSession={addSessionDoc}
+            onUpdateSession={updateSessionDetails}
+            onDeleteSession={deleteSessionDoc}
             onRemoveParticipant={performRemoval}
           />
         )}

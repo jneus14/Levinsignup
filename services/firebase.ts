@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase/app";
 import { 
   getFirestore, 
@@ -82,11 +83,30 @@ export const subscribeToSessions = (
 };
 
 /**
- * Update a specific session document
+ * Update a specific session document (Full overwrite)
+ * Used for registration where we modify participants
  */
 export const updateSessionDoc = async (session: DiscussionSession) => {
   const docRef = doc(db, SESSIONS_COLLECTION, session.id);
   await updateDoc(docRef, { ...session });
+};
+
+/**
+ * Update only session details (Metadata)
+ * Used for admin edits to avoid overwriting concurrent participant updates
+ */
+export const updateSessionDetails = async (session: DiscussionSession) => {
+  const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+  const { participants, waitlist, ...metadata } = session;
+  await updateDoc(docRef, { ...metadata });
+};
+
+/**
+ * Add a new session document
+ */
+export const addSessionDoc = async (session: DiscussionSession) => {
+  const docRef = doc(db, SESSIONS_COLLECTION, session.id);
+  await setDoc(docRef, session);
 };
 
 /**
