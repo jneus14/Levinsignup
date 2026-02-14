@@ -16,8 +16,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
     time: '',
     location: '',
     capacity: '10',
-    isUnlimited: false,
-    isActive: true
+    isUnlimited: false
   });
 
   useEffect(() => {
@@ -29,8 +28,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
         time: initialSession.time,
         location: initialSession.location,
         capacity: initialSession.capacity.toString(),
-        isUnlimited: !!initialSession.isUnlimited,
-        isActive: initialSession.isActive !== false // Default to true if undefined
+        isUnlimited: !!initialSession.isUnlimited
       });
     }
   }, [initialSession]);
@@ -46,7 +44,6 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
       location: formData.location,
       capacity: parseInt(formData.capacity, 10),
       isUnlimited: formData.isUnlimited,
-      isActive: formData.isActive,
       participants: initialSession?.participants || [],
       waitlist: initialSession?.waitlist || []
     };
@@ -134,31 +131,16 @@ export const SessionModal: React.FC<SessionModalProps> = ({ initialSession, onSa
                 onChange={e => setFormData({...formData, capacity: e.target.value})}
               />
             </div>
-            
-            <div className="col-span-2 border-t border-slate-100 pt-3 mt-1 space-y-3">
-                <div className="flex items-center gap-2 cursor-pointer">
-                    <input
-                    type="checkbox"
-                    id="isUnlimited"
-                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                    checked={formData.isUnlimited}
-                    onChange={e => setFormData({...formData, isUnlimited: e.target.checked})}
-                    />
-                    <label htmlFor="isUnlimited" className="text-sm font-medium text-slate-700 cursor-pointer">Unlimited Spots</label>
-                </div>
-
-                <div className="flex items-center gap-2 cursor-pointer">
-                    <input
-                    type="checkbox"
-                    id="isActive"
-                    className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
-                    checked={formData.isActive}
-                    onChange={e => setFormData({...formData, isActive: e.target.checked})}
-                    />
-                    <label htmlFor="isActive" className="text-sm font-medium text-slate-700 cursor-pointer">
-                        Active Session <span className="text-slate-400 text-xs font-normal">(Visible to students)</span>
-                    </label>
-                </div>
+            <div className="col-span-1 flex items-end pb-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  checked={formData.isUnlimited}
+                  onChange={e => setFormData({...formData, isUnlimited: e.target.checked})}
+                />
+                <span className="text-sm font-medium text-slate-700">Unlimited Spots</span>
+              </label>
             </div>
           </div>
 

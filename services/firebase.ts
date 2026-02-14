@@ -1,5 +1,4 @@
-
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
   collection, 
@@ -13,10 +12,10 @@ import {
   query,
   limit
 } from 'firebase/firestore';
-import type { Firestore } from 'firebase/firestore';
 import { DiscussionSession } from '../types';
 import { INITIAL_SESSIONS } from '../constants';
 
+// Project specific configuration
 const firebaseConfig = {
   apiKey: "AIzaSyB0oQteZZT7k2AIEY0vuIPWiZQfSFxftDE",
   authDomain: "sls-levin-signups.firebaseapp.com",
@@ -27,27 +26,18 @@ const firebaseConfig = {
   measurementId: "G-8F1EZ6P97N"
 };
 
-// Singleton pattern for Firebase initialization
-// Using try-catch to handle potential initialization race conditions
-let app;
-try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-} catch (error) {
-    console.error("Firebase initialization error:", error);
-    // Fallback if getApp fails unexpectedly
-    app = initializeApp(firebaseConfig, "fallback"); 
-}
-
-export const db: Firestore = getFirestore(app);
+// Initialize Firebase App - ensuring initializeApp is correctly used from 'firebase/app'
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
 
 const SESSIONS_COLLECTION = "sessions";
 
 /**
- * Seed the database with initial sessions if it's empty.
- * This ensures data persistence and prevents overwriting user data on app reload.
+ * Seed the database with initial sessions if it's empty
  */
 export const seedDatabase = async () => {
   try {
+    // We use a query with limit(1) to check for existence efficiently
     const q = query(collection(db, SESSIONS_COLLECTION), limit(1));
     const querySnapshot = await getDocs(q);
     
@@ -59,30 +49,11 @@ export const seedDatabase = async () => {
         batch.set(docRef, session);
       });
       await batch.commit();
-      console.log("Seeding complete. Data is now securely stored in Firestore.");
-    } else {
-        console.log("Database already initialized. Skipping seed to preserve user data.");
+      console.log("Seeding complete.");
     }
   } catch (error: any) {
     console.error("Error during database seeding:", error);
-    throw error;
-  }
-};
-
-/**
- * Clears the sessions collection.
- */
-export const clearDatabase = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, SESSIONS_COLLECTION));
-    const batch = writeBatch(db);
-    querySnapshot.forEach((d) => {
-      batch.delete(d.ref);
-    });
-    await batch.commit();
-    console.log("Database cleared.");
-  } catch (error) {
-    console.error("Error clearing database:", error);
+    // Re-throw so the UI can catch permission-denied
     throw error;
   }
 };
@@ -104,7 +75,6 @@ export const subscribeToSessions = (
       callback(sessions);
     },
     (error) => {
-      console.error("Firestore subscription error:", error);
       onError(error);
     }
   );

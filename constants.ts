@@ -10,7 +10,6 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     time: '2:00 PM',
     location: 'SLS',
     capacity: 10,
-    isActive: true,
     participants: [],
     waitlist: []
   },
@@ -19,9 +18,8 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     faculty: 'George Fisher',
     date: 'Thursday, March 5',
     time: '11:30 AM - 1:00 PM',
-    location: 'Coupa or Crocker',
-    capacity: 1,
-    isActive: true,
+    location: 'SLS',
+    capacity: 6,
     participants: [],
     waitlist: []
   },
@@ -34,18 +32,16 @@ export const INITIAL_SESSIONS: DiscussionSession[] = [
     location: 'SLS',
     capacity: 10,
     isUnlimited: true,
-    isActive: true,
     participants: [],
     waitlist: []
   },
   {
     id: 'mcconnell-2025',
     faculty: 'Michael McConnell',
-    date: 'TBD',
+    date: 'to be scheduled with interested students',
     time: 'TBD',
     location: 'Faculty Residence (His Home)',
-    capacity: 1,
-    isActive: true,
+    capacity: 5,
     participants: [],
     waitlist: []
   }
