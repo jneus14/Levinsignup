@@ -146,6 +146,20 @@ const App: React.FC = () => {
     const targetSession = sessions.find(s => s.id === activeSessionId);
     if (!targetSession) return;
 
+    // Normalize input for comparison
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = name.trim().toLowerCase();
+
+    // Check for duplicates in both participants and waitlist
+    const isDuplicate = [...targetSession.participants, ...targetSession.waitlist].some(
+      p => p.email.trim().toLowerCase() === normalizedEmail && p.name.trim().toLowerCase() === normalizedName
+    );
+
+    if (isDuplicate) {
+      alert("You have already registered for this session with this name and email.");
+      return;
+    }
+
     const isWaitlist = !targetSession.isUnlimited && targetSession.participants.length >= targetSession.capacity;
     const newStudent: Student = {
       id: Math.random().toString(36).substr(2, 9),
