@@ -194,6 +194,15 @@ const App: React.FC = () => {
 
   const activeSession = sessions.find(s => s.id === activeSessionId);
 
+  const sortedSessions = React.useMemo(() => {
+    return [...sessions].sort((a, b) => {
+      const isAFull = !a.isUnlimited && a.participants.length >= a.capacity;
+      const isBFull = !b.isUnlimited && b.participants.length >= b.capacity;
+      if (isAFull === isBFull) return 0;
+      return isAFull ? 1 : -1;
+    });
+  }, [sessions]);
+
   return (
     <div className="min-h-screen bg-stone-50 pb-20 font-sans text-stone-900">
       {/* Permission Error Banner */}
@@ -291,7 +300,7 @@ service cloud.firestore {
       <main className="max-w-6xl mx-auto px-4 py-12">
         {view === 'browse' && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {sessions.map(session => (
+            {sortedSessions.map(session => (
               <SessionCard key={session.id} session={session} onSignUp={handleSignUpClick} />
             ))}
             {sessions.length === 0 && !error && (
